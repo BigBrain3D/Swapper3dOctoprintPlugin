@@ -1,0 +1,4 @@
+include README.md
+recursive-include Swapper3D_Package/templates *
+recursive-include Swapper3D_Package/translations *
+recursive-include Swapper3D_Package/static *
