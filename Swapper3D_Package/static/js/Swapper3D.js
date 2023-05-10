@@ -5,25 +5,19 @@
  * License: AGPLv3
  */
 $(function() {
-    function Swapper3dViewModel(parameters) {
+    function Swapper3DViewModel(parameters) {
         var self = this;
 
-        // assign the injected parameters, e.g.:
-        // self.loginStateViewModel = parameters[0];
-        // self.settingsViewModel = parameters[1];
+        self.settings = parameters[0];
 
-        // TODO: Implement your plugin's view model here.
+        // Your frontend logic goes here
     }
 
-    /* view model class, parameters for constructor, container to bind to
-     * Please see http://docs.octoprint.org/en/master/plugins/viewmodels.html#registering-custom-viewmodels for more details
-     * and a full list of the available options.
-     */
-    OCTOPRINT_VIEWMODELS.push({
-        construct: Swapper3dViewModel,
-        // ViewModels your plugin depends on, e.g. loginStateViewModel, settingsViewModel, ...
-        dependencies: [ /* "loginStateViewModel", "settingsViewModel" */ ],
-        // Elements to bind to, e.g. #settings_plugin_Swapper3D, #tab_plugin_Swapper3D, ...
-        elements: [ /* ... */ ]
-    });
+    // This is how your plugin gets registered with the application
+    ADDITIONAL_VIEWMODELS.push([
+        Swapper3DViewModel,
+        ["settingsViewModel"],
+        ["#tab_plugin_swapper3d"]
+    ]);
 });
+
