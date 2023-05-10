@@ -27,7 +27,7 @@ plugin_author = "BigBrain3D"
 plugin_author_email = "info@bigbrain3D.com"
 
 # The plugin's homepage URL. Can be overwritten within OctoPrint's internal data via __plugin_url__ in the plugin module
-plugin_url = "https://github.com/BigBrain3D/Swapper3D_Octoprint_Plugin_V1-/"
+plugin_url = "https://github.com/BigBrain3D/Swapper3D_Octoprint_Plugin_V1/"
 
 # The plugin's license. Can be overwritten within OctoPrint's internal data via __plugin_license__ in the plugin module
 plugin_license = "AGPLv3"
