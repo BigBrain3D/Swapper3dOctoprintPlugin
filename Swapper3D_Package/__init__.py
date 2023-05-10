@@ -4,7 +4,7 @@
 # * Author: BigBrain3D
 # * License: AGPLv3
 # */
- import requests
+import requests
 import octoprint.plugin
 import serial
 
