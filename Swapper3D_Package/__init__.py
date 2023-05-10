@@ -34,8 +34,17 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
             pass
 
     def get_update_information(self):
-        # Update information for the plugin
-        pass
+        return dict(
+            swapper3d=dict(
+                displayName="Swapper3D Plugin",
+                displayVersion=self._plugin_version,
+                type="github_release",
+                user="BigBrain3D",
+                repo="Swapper3D_Octoprint_Plugin_V1",
+                current=self._plugin_version,
+                pip="https://github.com/BigBrain3D/Swapper3D_Octoprint_Plugin_V1/archive/{target_version}.zip"
+            )
+        )
 
 __plugin_name__ = "Swapper3D Plugin"
 __plugin_pythoncompat__ = ">=2.7,<4"
