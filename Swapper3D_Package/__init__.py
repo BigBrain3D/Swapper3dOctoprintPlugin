@@ -14,7 +14,7 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                       octoprint.plugin.EventHandlerPlugin):
     def __init__(self):
         self._swapper3d_connection = None
-        self._plugin_version = "0.1.6"  # replace with your current version
+        self._plugin_version = "0.1.7"  # replace with your current version
 
     ...
 
