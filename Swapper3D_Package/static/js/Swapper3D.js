@@ -10,14 +10,30 @@ $(function() {
 
         self.settings = parameters[0];
 
-        // Your frontend logic goes here
+        self.connectSwapper3D = function() {
+            $.ajax({
+                url: API_BASEURL + "plugin/swapper3d",
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify({
+                    command: "connect",
+                    port: self.settings.settings.plugins.swapper3d.serialPort(),
+                    baudrate: self.settings.settings.plugins.swapper3d.baudrate()
+                }),
+                contentType: "application/json; charset=UTF-8"
+            }).done(function() {
+                new PNotify({title: "Swapper3D", text: "Connected successfully!", type: "success"});
+            }).fail(function() {
+                new PNotify({title: "Swapper3D", text: "Failed to connect.", type: "error"});
+            });
+        };
     }
 
-    // This is how your plugin gets registered with the application
     ADDITIONAL_VIEWMODELS.push([
         Swapper3DViewModel,
         ["settingsViewModel"],
         ["#tab_plugin_swapper3d"]
     ]);
 });
+
 

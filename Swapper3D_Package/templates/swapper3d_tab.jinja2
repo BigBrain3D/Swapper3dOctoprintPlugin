@@ -8,3 +8,27 @@
     <h3>Swapper3D Control</h3>
     <!-- Your UI elements go here -->
 </div>
+<div id="tab_plugin_swapper3d" class="tab-pane">
+    <h2>Swapper3D Control</h2>
+    <div>
+        <form class="form-horizontal">
+            <div class="control-group">
+                <label class="control-label">Serial Port:</label>
+                <div class="controls">
+                    <input type="text" data-bind="value: settings.plugins.swapper3d.serialPort" />
+                </div>
+            </div>
+            <div class="control-group">
+                <label class="control-label">Baudrate:</label>
+                <div class="controls">
+                    <input type="text" data-bind="value: settings.plugins.swapper3d.baudrate" />
+                </div>
+            </div>
+            <div class="control-group">
+                <div class="controls">
+                    <button class="btn" data-bind="click: connectSwapper3D">Connect</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
