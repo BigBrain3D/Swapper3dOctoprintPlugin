@@ -14,6 +14,10 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                       octoprint.plugin.EventHandlerPlugin):
     def __init__(self):
         self._swapper3d_connection = None
+        self._plugin_version = "0.1.5"  # replace with your current version
+
+    ...
+
 
     def on_after_startup(self):
         # Connect to the Swapper3D here, using the settings
@@ -42,9 +46,19 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                 user="BigBrain3D",
                 repo="Swapper3D_Octoprint_Plugin_V1",
                 current=self._plugin_version,
-                pip="https://github.com/BigBrain3D/Swapper3D_Octoprint_Plugin_V1/archive/{target_version}.zip"
+                pip="https://github.com/BigBrain3D/Swapper3D_Octoprint_Plugin_V1-/archive/{target_version}.zip"
             )
         )
+        
+    def __plugin_load__():
+        global __plugin_implementation__
+        __plugin_implementation__ = Swapper3DPlugin()
+
+        global __plugin_hooks__
+        __plugin_hooks__ = {
+            "octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.get_update_information
+        }
+
 
 __plugin_name__ = "Swapper3D Plugin"
 __plugin_pythoncompat__ = ">=2.7,<4"
