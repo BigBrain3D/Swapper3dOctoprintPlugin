@@ -1,0 +1,81 @@
+# Import required libraries
+import octoprint.plugin
+from . import Swapper3D_utils
+
+class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
+                      octoprint.plugin.TemplatePlugin,
+                      octoprint.plugin.SettingsPlugin,
+                      octoprint.plugin.AssetPlugin,
+                      octoprint.plugin.EventHandlerPlugin,
+                      octoprint.plugin.SimpleApiPlugin):
+
+    def get_api_commands(self):
+        return {
+            "connect": ["port", "baudrate"],
+        }
+
+    def on_api_command(self, command, data):
+        if command == "connect":
+            self.connectSwapper3D()
+
+    def __init__(self):
+        self._Swapper3D_connection = None
+        self._plugin_version = "0.1.20"  # replace with your current version
+
+    def get_settings_defaults(self):
+        return {"serialPort": "", "baudrate": ""}
+
+    def get_template_configs(self):
+        return [
+            {"type": "settings", "custom_bindings": True},
+            {"type": "tab", "name": "Swapper3D", "custom_bindings": True, "template": "Swapper3D_tab.jinja2"},
+        ]
+
+    def get_assets(self):
+        return dict(
+            js=["js/Swapper3D.js"]
+        )
+
+    def on_event(self, event, payload):
+        if event == "PrintPaused":
+            # Handle the tool change here
+            pass
+
+    def get_update_information(self):
+        return dict(
+            Swapper3D=dict(
+                displayName="Swapper3D",
+                displayVersion=self._plugin_version,
+                type="github_release",
+                user="BigBrain3D",
+                repo="Swapper3D_Octoprint_Plugin_V1",
+                current=self._plugin_version,
+                pip="https://github.com/BigBrain3D/Swapper3D_Octoprint_Plugin_V1/archive/refs/tags/{target_version}.zip"
+            )
+        )
+
+    # The following function is called when the 'Connect' button is clicked in the UI
+    def connectSwapper3D(self):
+        self._logger.info("Connect button clicked!")
+        serial_port = self._settings.get(["serialPort"])
+        baudrate = self._settings.get(["baudrate"])
+        self._logger.info("Serial Port: " + serial_port)
+        self._logger.info("Baudrate: " + baudrate)
+
+
+__plugin_name__ = "Swapper3D"
+__plugin_version__ = "1.0.0"
+__plugin_description__ = "A plugin for 3D printer filament swapping"
+__plugin_author__ = "BigBrain3D"
+__plugin_url__ = "https://github.com/BigBrain3D/Swapper3D"
+__plugin_license__ = "AGPLv3"
+__plugin_pythoncompat__ = ">=3.1,<4"
+
+def __plugin_load__():
+    global __plugin_implementation__
+    __plugin_implementation__ = Swapper3DPlugin()
+
+    global __plugin_hooks__
+    __plugin_hooks__ = {
+        "octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.get_update_information
+    }

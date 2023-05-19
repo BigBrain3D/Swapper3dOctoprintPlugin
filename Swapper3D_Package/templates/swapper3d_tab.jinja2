@@ -1,34 +1,38 @@
-/*
- * View model for Swapper3D
- *
- * Author: BigBrain3D
- * License: AGPLv3
- */
- <div class="container" data-bind="visible: loginState.isUser()">
-    <h3>Swapper3D Control</h3>
-    <!-- Your UI elements go here -->
-</div>
-<div id="tab_plugin_swapper3d" class="tab-pane">
-    <h2>Swapper3D Control</h2>
-    <div>
-        <form class="form-horizontal">
-            <div class="control-group">
-                <label class="control-label">Serial Port:</label>
-                <div class="controls">
-                    <input type="text" data-bind="value: settings.plugins.swapper3d.serialPort" />
-                </div>
-            </div>
-            <div class="control-group">
-                <label class="control-label">Baudrate:</label>
-                <div class="controls">
-                    <input type="text" data-bind="value: settings.plugins.swapper3d.baudrate" />
-                </div>
-            </div>
-            <div class="control-group">
-                <div class="controls">
-                    <button class="btn" data-bind="click: connectSwapper3D">Connect</button>
-                </div>
-            </div>
-        </form>
-    </div>
+{# Octoprint plugin name: Swapper3D, File: Swapper3D_tab.jinja2, Author: BigBrain3D, License: AGPLv3 #}
+
+<div id="tab_plugin_Swapper3D">
+    <h1>Swapper3D Control</h1>
+
+    <h3>Swapper3D Connection State</h3>
+    <input id="connectionState" type="text" class="form-control" readonly>
+    <br>
+    <button id="connectSwapper3D" type="button" class="btn btn-primary">Connect</button>
+    <button id="disconnectSwapper3D" type="button" class="btn btn-primary">Disconnect</button>
+
+    <br><br>
+
+    <h3>Currently loaded insert#</h3>
+    <input id="currentlyLoadedInsert" type="text" class="form-control" readonly>
+    <br>
+    <button id="swapToInsertButton" type="button" class="btn btn-primary">Swap to insert #</button>
+    <select id="insertDropdown">
+        {% for i in range(1, 26) %}
+        <option value="{{ i }}">{{ i }}</option>
+        {% endfor %}
+    </select>
+    
+    <br>
+
+    <button id="unloadInsertButton" type="button" class="btn btn-primary">Unload</button>
+
+    <br><br>
+
+    <h3>Swapper3D Log</h3>
+    <textarea id="Swapper3DLog" class="form-control" rows="5" style="width:100%"></textarea>
+
+    <br><br>
+
+    <a href="https://www.bigbrain3d.com" target="_blank">
+        <img src="{{ url_for('plugin.Swapper3D.static', filename='img/BigBrain3D-Logo-2022-1.jpg') }}" alt="BigBrain3D Logo" style="width:50%">
+    </a>
 </div>

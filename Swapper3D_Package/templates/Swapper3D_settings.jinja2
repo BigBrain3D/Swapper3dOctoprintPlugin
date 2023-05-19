@@ -1,0 +1,15 @@
+{# Octoprint plugin name: Swapper3D, File: Swapper3D_settings.jinja2, Author: BigBrain3D, License: AGPLv3 #}
+<div class="control-group">
+    <h4>Print head Swap location</h4>
+    <label for="xPos">X axis position:</label>
+    <input type="text" id="xPos" data-bind="value: settings.plugins.Swapper3D.xPos">
+
+    <label for="yPos">Y axis position:</label>
+    <input type="text" id="yPos" data-bind="value: settings.plugins.Swapper3D.yPos">
+
+    <label for="zHeight">Minimum Z height for tool change:</label>
+    <input type="text" id="zHeight" data-bind="value: settings.plugins.Swapper3D.zHeight">
+
+    <label for="gcode">Swap tool change injection gcode:</label>
+    <textarea id="gcode" rows="4" cols="50" data-bind="value: settings.plugins.Swapper3D.gcode"></textarea>
+</div>

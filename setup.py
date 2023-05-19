@@ -1,3 +1,5 @@
+# Octoprint plugin name: Swapper3D, File: setup.py, Author: BigBrain3D, License: AGPLv3
+ 
 # coding=utf-8
 
 ########################################################################################################################
@@ -14,7 +16,7 @@ plugin_package = "Swapper3D_Package"
 plugin_name = "Swapper3D"
 
 # The plugin's version. Can be overwritten within OctoPrint's internal data via __plugin_version__ in the plugin module
-plugin_version = "0.1.13"
+plugin_version = "0.1.32"
 
 # The plugin's description. Can be overwritten within OctoPrint's internal data via __plugin_description__ in the plugin
 # module
@@ -33,7 +35,7 @@ plugin_url = "https://github.com/BigBrain3D/Swapper3D_Octoprint_Plugin_V1/"
 plugin_license = "AGPLv3"
 
 # Any additional requirements besides OctoPrint should be listed here
-plugin_requires = []
+plugin_requires = ["pyserial>=3.5,<4"]
 
 ### --------------------------------------------------------------------------------------------------------------------
 ### More advanced options that you usually shouldn't have to touch follow after this point
@@ -59,9 +61,9 @@ plugin_ignored_packages = []
 # Example:
 #     plugin_requires = ["someDependency==dev"]
 #     additional_setup_parameters = {"dependency_links": ["https://github.com/someUser/someRepo/archive/master.zip#egg=someDependency-dev"]}
-# "python_requires": ">=3,<4" blocks installation on Python 2 systems, to prevent confused users and provide a helpful error. 
+# "python_requires": ">=3.10,<4" blocks installation on Python 2 systems, to prevent confused users and provide a helpful error. 
 # Remove it if you would like to support Python 2 as well as 3 (not recommended).
-additional_setup_parameters = {"python_requires": ">=3,<4"}
+additional_setup_parameters = {"python_requires": ">=3.10,<4"}
 
 ########################################################################################################################
 
