@@ -2,14 +2,41 @@
 <div class="control-group">
     <h4>Print head Swap location</h4>
     <label for="xPos">X axis position:</label>
-    <input type="text" id="xPos" data-bind="value: settings.plugins.Swapper3D.xPos">
+    <input type="text" id="xPos" title="Should be approx 251" data-bind="value: settings.plugins.Swapper3D.xPos" placeholder="Default: 251"><br>
 
     <label for="yPos">Y axis position:</label>
-    <input type="text" id="yPos" data-bind="value: settings.plugins.Swapper3D.yPos">
+    <input type="text" id="yPos" title="Default: 175" data-bind="value: settings.plugins.Swapper3D.yPos" placeholder="Default: 175"><br>
 
-    <label for="zHeight">Minimum Z height for tool change:</label>
-    <input type="text" id="zHeight" data-bind="value: settings.plugins.Swapper3D.zHeight">
+    <label for="zHeight">Minimum Z height:</label>
+    <input type="text" id="zHeight" title="MMU:82, Palette:95" data-bind="value: settings.plugins.Swapper3D.zHeight" placeholder="MMU:82, Palette:95"><br>
+  
+    <label for="zMotorCurrent">Z Motor Current(ma):</label>
+    <input type="text" id="zMotorCurrent" title="Default: 900" data-bind="value: settings.plugins.Swapper3D.zMotorCurrent" placeholder="Default: 900"><br>
 
-    <label for="gcode">Swap tool change injection gcode:</label>
-    <textarea id="gcode" rows="4" cols="50" data-bind="value: settings.plugins.Swapper3D.gcode"></textarea>
+    <h4>Gcode Sections</h4>
+    <label for="beforeStartGcode">Before Start Gcode:</label>
+    <textarea id="beforeStartGcode" rows="4" cols="50" data-bind="value: settings.plugins.Swapper3D.beforeStartGcode"></textarea><br>
+    
+    <label for="initialToolLoadGcode">Initial Tool Load Gcode:</label>
+    <textarea id="initialToolLoadGcode" rows="4" cols="50" data-bind="value: settings.plugins.Swapper3D.initialToolLoadGcode"></textarea><br>
+
+    <label for="toolChangeGcode">Tool Change Gcode:</label>
+    <textarea id="toolChangeGcode" rows="4" cols="50" data-bind="value: settings.plugins.Swapper3D.toolChangeGcode"></textarea><br>
+
+    <label for="beforeEndGcode">Before End Gcode:</label>
+    <textarea id="beforeEndGcode" rows="4" cols="50" data-bind="value: settings.plugins.Swapper3D.beforeEndGcode"></textarea><br>
+    
+    <h4>Filament Switcher Type</h4>
+    <label for="FilamentSwitcherType">Select a filament switcher type:</label>
+    <select id="FilamentSwitcherType" data-bind="value: settings.plugins.Swapper3D.FilamentSwitcherType">
+        <option value="parallel">Parallel (i.e. MMU)</option>
+        <option value="linear">Linear (i.e. Palette)</option>
+    </select>
+
+    <h4>Extra Filament Cut Length on Swap</h4>
+    <label for="extraFilamentCutLength">Specify extra filament cut length on swap:</label>
+    <input type="text" id="extraFilamentCutLength" title="Default: 60" data-bind="value: settings.plugins.Swapper3D.extraFilamentCutLength" placeholder="Default: 60"><br>
+
+    <label for="lengthEachCut">Specify length of each cut:</label>
+    <input type="text" id="lengthEachCut" title="Default: 15" data-bind="value: settings.plugins.Swapper3D.lengthEachCut" placeholder="Default: 15">
 </div>

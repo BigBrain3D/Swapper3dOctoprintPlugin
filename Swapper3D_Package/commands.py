@@ -1,48 +1,44 @@
 # Octoprint plugin name: Swapper3D, File: commands.py, Author: BigBrain3D, License: AGPLv3
 
 from flask import request, jsonify
-from .Swapper3D_utils import try_handshake  # import the try_handshake function
+from .Swapper3D_utils import * #import all methods
 
 def handle_command(self):
     data = request.json
     command = data.get("command")
 
     if command == "connect":
-        # Check if a connection already exists
         if self.serial_conn is not None:
-            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="A connection is already established. Disconnect before attempting a new connection."))
-            return jsonify(dict(success=False, error="A connection is already established. Disconnect before attempting a new connection.")), 500
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Already connected."))
+            return jsonify(result="False"), 500
 
-        # Send a plugin message to update the "Swapper3DLog" textarea
         self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Received command: " + command))
+        success, error = try_handshake(self) 
+        self.serial_conn = success #added manually
 
-        # call the try_handshake function when the connect command is received
-        serial_conn, error = try_handshake(self)
-
-        if serial_conn is None:
+        if not success:
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Handshake failed: {error}"))
-            return jsonify(dict(success=False, error=error)), 500
-        else:
-            # Save the serial connection object
-            self.serial_conn = serial_conn
-            if self.serial_conn is None:
-                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Connection lost after handshake."))
-                return jsonify(dict(success=False, error="Connection lost after handshake")), 500
-            else:
-                self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Connected"))
-                return jsonify(dict(success=True))
+            return jsonify(result="False", error=str(error)), 500
+
+        if self.serial_conn is None:
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Connection lost after handshake."))
+            return jsonify(result="False", error="Connection lost after handshake"), 500
+
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Connected"))
+        return jsonify(result=str(success))
 
     elif command == "send":
         message = data.get("message")
+
         try:
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Sending message: {message}"))
             self.serial_conn.write(message.encode())
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Message sent."))
         except Exception as e:
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Failed to send message: {str(e)}"))
-            return jsonify(success=False, error=str(e)), 500
+            return jsonify(result="False", error=str(e)), 500
 
-        return jsonify(success=True)
+        return jsonify(result="True")
 
     elif command == "disconnect":
         if self.serial_conn is not None:
@@ -54,11 +50,58 @@ def handle_command(self):
                 self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Disconnected"))
             except Exception as e:
                 self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Failed to disconnect: {str(e)}"))
-                return jsonify(success=False, error=str(e)), 500
+                return jsonify(result="False", error=str(e)), 500
         else:
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="No connection to close."))
-            return jsonify(success=False, error="No connection to close."), 500
+            return jsonify(result="False", error="No connection to close."), 500
 
-        return jsonify(success=True)
+        return jsonify(result="True")
 
-    return jsonify(success=False), 400
+
+    elif command == "swap to":
+        insert_number = data.get("insert_number")
+
+        # Debug log: Print the raw 'insert_number' value received
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Raw insert_number received: {insert_number}"))
+
+        try:
+            insert_number = int(insert_number)
+        # Ensure 'insert_number' is an integer
+        except ValueError:
+            # If 'insert_number' cannot be converted to an integer, log an error and return
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Invalid insert_number: cannot convert to integer"))
+            return jsonify(result="False", error="Invalid insert_number: cannot convert to integer"), 400
+
+        # Debug log: Print the validated 'insert_number' value
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Validated insert_number: {insert_number}"))
+
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Attempting to swap to insert#: {insert_number}"))
+
+        try:
+            success, error = swap_to_insert(self, insert_number)
+            if not success:
+                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Failed to swap to insert: {error}"))
+                return jsonify(result="False", error=str(error)), 500
+        except Exception as e:
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Failed to swap to insert: {str(e)}"))
+            return jsonify(result="False", error=str(e)), 500
+
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Swapped to insert: {insert_number}"))
+        return jsonify(result=str(success))
+        
+    elif command == "unload":
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Received command: " + command))
+        try:
+            success, error = unload_insert(self)
+            if not success:
+                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Unload failed: {error}"))
+                return jsonify(result="False", error=str(error)), 500
+        except Exception as e:
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Exception during unload: {str(e)}"))
+            return jsonify(result="False", error=str(e)), 500
+
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Unload successful"))
+        return jsonify(result="True")
+    else:
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Command not recognized: {command}"))
+        return jsonify(result="False", error="Command not recognized."), 500

@@ -1,5 +1,4 @@
-//Octoprint plugin name: Swapper3D, File: Swapper3D_ViewModel.js, Author: BigBrain3D, License: AGPLv3 
-
+// Octoprint plugin name: Swapper3D, File: Swapper3D_ViewModel.py, Author: BigBrain3D, License: AGPLv3
 function Swapper3DViewModel(parameters) {
     var self = this;
 
@@ -8,98 +7,81 @@ function Swapper3DViewModel(parameters) {
     self.onDataUpdaterPluginMessage = function(plugin, data) {
         if (plugin === "Swapper3D") {
             if (data.type === "log") {
-                var logEntry = data.message;
-                self.updateLog(logEntry);
+                self.logToSwapper3D(data.message);
             } else if (data.type === "connectionState") {
                 $("#connectionState").val(data.message);
+            } else if (data.type === "currentlyLoadedInsert") {
+                $("#currentlyLoadedInsert").val(data.message);
             }
         }
     };
 
-    self.connectSwapper3D = function() {
-        console.log("Handshake Swapper3D button was clicked");
-        self.updateLog("Handshake Swapper3D button was clicked");
+    self.logToSwapper3D = function(message) {
+        var existingContent = $("#Swapper3DLog").val();
+        var newContent = existingContent + message + "\n";
+        $("#Swapper3DLog").val(newContent);
+        $("#Swapper3DLog").scrollTop($("#Swapper3DLog")[0].scrollHeight);
+    };
 
-        // Only attempt to connect if we're currently disconnected
-        if ($("#connectionState").val() !== "Connected") {
-            $.ajax({
-                url: "/plugin/Swapper3D/command",
-                type: "POST",
-                dataType: "json",
-                data: JSON.stringify({
-                    command: "connect"
-                }),
-                contentType: "application/json; charset=utf-8",
-                success: function(response) {
-                    console.log("Handshake started");
-                },
-                error: function(jqXHR) {
-                    console.log("Handshake failed: " + jqXHR.responseText);
-                }
-            });
-        } else {
-            self.updateLog("Attempted to connect while already connected.");
-        }
+    self.connectSwapper3D = function() {
+        self.logToSwapper3D("Connect Swapper3D button was clicked");
+        self.sendCommandToSwapper3D("connect");
     };
 
     self.disconnectSwapper3D = function() {
-        console.log("Disconnect Swapper3D button was clicked");
-        self.updateLog("Disconnect Swapper3D button was clicked");
+        self.logToSwapper3D("Disconnect Swapper3D button was clicked");
+        self.sendCommandToSwapper3D("disconnect");
+    };
+
+    self.unloadInsert = function(event) {
+        event.preventDefault();
+        self.logToSwapper3D("Unload Insert button was clicked");
+        self.sendCommandToSwapper3D("unload");
+    };
+
+    self.swapToInsert = function(event) {
+        event.preventDefault();
+        var selectedInsert = $("#insertDropdown").val();
+        self.logToSwapper3D("SwapToInsert button was clicked: " + selectedInsert);
+        self.sendCommandToSwapper3D("swap to", selectedInsert);
+    };
+
+    self.sendCommandToSwapper3D = function(command, insert_number = null) {
+        var payload = {
+            command: command
+        };
+
+        if (insert_number) {
+            payload["insert_number"] = insert_number;
+        }
 
         $.ajax({
             url: "/plugin/Swapper3D/command",
             type: "POST",
             dataType: "json",
-            data: JSON.stringify({
-                command: "disconnect"
-            }),
+            data: JSON.stringify(payload),
             contentType: "application/json; charset=utf-8",
             success: function(response) {
-                console.log("Disconnect started");
+                self.logToSwapper3D(command.charAt(0).toUpperCase() + command.slice(1) + " command sent");
             },
             error: function(jqXHR) {
-                console.log("Disconnect failed: " + jqXHR.responseText);
+                self.logToSwapper3D(command.charAt(0).toUpperCase() + command.slice(1) + " command failed: " + jqXHR.responseText);
             }
         });
     };
-
-    self.unloadInsert = function(event) {
-        event.preventDefault();
-        console.log("Unload Insert button was clicked");
-        $("#currentlyLoadedInsert").val("None");
-        self.updateLog("Unload Insert button was clicked. Current Insert set to None.");
-    };
-
-    self.swapToInsert = function(event) {
-        event.preventDefault();
-        console.log("SwapToInsert button was clicked");
-        var selectedInsert = $("#insertDropdown").val();
-        $("#currentlyLoadedInsert").val(selectedInsert);
-        self.updateLog("SwapToInsert button was clicked. Current Insert set to " + selectedInsert + ".");
-    };
-
-    self.updateLog = function(message) {
-        var existingContent = $("#Swapper3DLog").val();
-        var newContent = existingContent + message + "\n";
-        $("#Swapper3DLog").val(newContent);
-        // Scroll to the bottom
-        $("#Swapper3DLog").scrollTop($("#Swapper3DLog")[0].scrollHeight);
-    }
 
     self.onStartupComplete = function() {
         $('#connectSwapper3D').click(self.connectSwapper3D);
         $('#disconnectSwapper3D').click(self.disconnectSwapper3D);
         $('#unloadInsertButton').click(self.unloadInsert);
         $('#swapToInsertButton').click(self.swapToInsert);
-        $("#connectionState").val("Disconnected");  // initial state is Disconnected
         $("#currentlyLoadedInsert").val("None");
-        // initial state is None
     };
 }
 
 // Register the ViewModel
 ADDITIONAL_VIEWMODELS.push([
     Swapper3DViewModel,
-    ["controlViewModel"],  // ControlViewModel instance is required
+    ["controlViewModel"],
     ["#tab_plugin_Swapper3D"]
 ]);
