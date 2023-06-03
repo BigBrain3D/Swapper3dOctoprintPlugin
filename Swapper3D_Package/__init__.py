@@ -85,7 +85,7 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                 user="BigBrain3D",
                 repo="Swapper3D_Octoprint_Plugin_V1",
                 current=self._plugin_version,
-                pip="https://github.com/BigBrain3D/Swapper3D_Octoprint_Plugin_V1/archive/{target_version}.zip"
+                pip="https://github.com/BigBrain3D/Swapper3D_Octoprint_Plugin/archive/{target_version}.zip"
             )
         )
 

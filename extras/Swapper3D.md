@@ -11,9 +11,9 @@ license: AGPLv3
 # TODO
 date: today's date in format YYYY-MM-DD, e.g. 2015-04-21
 
-homepage: https://github.com/BigBrain3D/Swapper3D_Octoprint_Plugin_V1-/
-source: https://github.com/BigBrain3D/Swapper3D_Octoprint_Plugin_V1-/
-archive: https://github.com/BigBrain3D/Swapper3D_Octoprint_Plugin_V1-/
+homepage: https://github.com/BigBrain3D/Swapper3D_Octoprint_Plugin/
+source: https://github.com/BigBrain3D/Swapper3D_Octoprint_Plugin/
+archive: https://github.com/BigBrain3D/Swapper3D_Octoprint_Plugin/
 
 # TODO
 # Set this to true if your plugin uses the dependency_links setup parameter to include
