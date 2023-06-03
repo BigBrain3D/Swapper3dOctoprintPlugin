@@ -7,7 +7,7 @@ plugin_version = "0.1.33"
 plugin_description = "Connect to Swapper3D and coordinate swaps with the 3D printer"
 plugin_author = "BigBrain3D"
 plugin_author_email = "info@bigbrain3D.com"
-plugin_url = "https://github.com/BigBrain3D/Swapper3D_Octoprint_Plugin_V1/"
+plugin_url = "https://github.com/BigBrain3D/Swapper3D_Octoprint_Plugin/"
 plugin_license = "AGPLv3"
 plugin_requires = ["pyserial>=3.5,<4"]
 plugin_additional_data = []
