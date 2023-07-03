@@ -1,5 +1,5 @@
 # Swapper3D_Octoprint_Plugin
-The first Octoprint plugin for synchronizing a 3D printer with the Swapper3D
+The Octoprint plugin for synchronizing a 3D printer with the Swapper3D
 
 
 This OctoPrint plugin, named Swapper3D, is designed to manage a 3D printer tool head swapping mechanism by the same name. The plugin provides control, status monitoring, and log tracking for the Swapper3D device. Here's a summary of what each file contributes:

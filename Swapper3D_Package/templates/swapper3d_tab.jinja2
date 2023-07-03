@@ -24,6 +24,10 @@
     <br>
 
     <button id="unloadInsertButton" type="button" class="btn btn-primary">Unload</button>
+    <!-- New Bore alignment buttons -->
+    <br><br>
+    <button id="boreAlignmentOnButton" type="button" class="btn btn-primary">Bore alignment mode ON</button>
+    <button id="boreAlignmentOffButton" type="button" class="btn btn-primary">Bore alignment mode OFF</button>
 
     <br><br>
 
@@ -31,6 +35,26 @@
     <textarea id="Swapper3DLog" class="form-control" rows="5" style="width:100%"></textarea>
 
     <br><br>
+<!--
+    <h3>Firmware Information</h3>
+
+    <div class="form-group">
+        <label for="installedFirmwareVersion">Installed Firmware Version:</label>
+        <input id="installedFirmwareVersion" type="text" class="form-control" readonly>
+    </div>
+
+    <div class="form-group">
+        <label for="latestFirmwareVersion">Latest Firmware Version:</label>
+        <input id="latestFirmwareVersion" type="text" class="form-control" readonly>
+    </div>
+
+
+    <button id="installRuntimeFirmware" type="button" class="btn btn-primary">Install Runtime Firmware</button>
+    <br>
+    <button id="installServoSetupFirmware" type="button" class="btn btn-primary">Install Servo Setup Firmware</button>
+
+    <br><br>
+-->
 
     <a href="https://www.bigbrain3d.com" target="_blank">
         <img src="{{ url_for('plugin.Swapper3D.static', filename='img/BigBrain3D-Logo-2022-1.jpg') }}" alt="BigBrain3D Logo" style="width:50%">

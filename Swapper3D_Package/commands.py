@@ -2,6 +2,10 @@
 
 from flask import request, jsonify
 from .Swapper3D_utils import * #import all methods
+from .firmware_utils import download_latest_firmware
+from .Swap_utils import *
+import time
+
 
 def handle_command(self):
     data = request.json
@@ -13,7 +17,7 @@ def handle_command(self):
             return jsonify(result="False"), 500
 
         self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Received command: " + command))
-        success, error = try_handshake(self) 
+        success, error = try_handshake(self)
         self.serial_conn = success #added manually
 
         if not success:
@@ -25,6 +29,8 @@ def handle_command(self):
             return jsonify(result="False", error="Connection lost after handshake"), 500
 
         self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Connected"))
+        time.sleep(3)
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Ready to Swap!"))
         return jsonify(result=str(success))
 
     elif command == "send":
@@ -86,6 +92,9 @@ def handle_command(self):
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Failed to swap to insert: {str(e)}"))
             return jsonify(result="False", error=str(e)), 500
 
+
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="currentlyLoadedInsert", message=str(insert_number)))
+
         self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Swapped to insert: {insert_number}"))
         return jsonify(result=str(success))
         
@@ -102,6 +111,88 @@ def handle_command(self):
 
         self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Unload successful"))
         return jsonify(result="True")
+        
+        
+    elif command == "get firmware version":
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Received command: " + command))
+        try:
+            success, error = get_firmware_version(self)
+            if not success:
+                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Get firmware version failed: {error}"))
+                return jsonify(result="False", error=str(error)), 500
+        except Exception as e:
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Exception during getting firmware version: {str(e)}"))
+            return jsonify(result="False", error=str(e)), 500
+
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Firmware version: {success}"))
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="firmwareVersion", message=str(success)))  # Add this line
+        return jsonify(result=str(success))
+    elif command == "get latest firmware version":
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Received command: " + command))
+        try:
+            response = requests.get("https://api.github.com/repos/BigBrain3D/Swapper3D_Firmware/releases/latest")
+            response.raise_for_status()  # Raise exception if the request failed
+            latest_version = response.json()["tag_name"]
+
+        except Exception as e:
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Exception during getting latest firmware version: {str(e)}"))
+            return jsonify(result="False", error=str(e)), 500
+
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Latest firmware version: {latest_version}"))
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="latestFirmwareVersion", message=latest_version))
+        return jsonify(result=latest_version)
+    elif command == "install runtime firmware":
+        self._logger.info("The 'install runtime firmware' command has been triggered.")
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Received command: " + command))
+        try:
+            download_latest_firmware(self, "runtime_firmware")  # Download the latest runtime firmware
+            # TODO: Implement the installation (flashing) of the firmware to your device
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Firmware installed successfully"))
+        except Exception as e:
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Exception during installing firmware: {str(e)}"))
+            return jsonify(result="False", error=str(e)), 500
+
+    elif command == "install servo setup firmware":
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Received command: " + command))
+        try:
+            download_latest_firmware(self, "servo_setup")  # Download the latest servo setup firmware
+            # TODO: Implement the installation (flashing) of the servo setup firmware to your device
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Servo setup firmware installed successfully"))
+        except Exception as e:
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Exception during installing servo setup firmware: {str(e)}"))
+            return jsonify(result="False", error=str(e)), 500
+
+    elif command == "borealignon":
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Received command: " + command))
+        try:
+            success, error = bore_align_on(self)
+            if not success:
+                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Bore alignment on failed: {error}"))
+                return jsonify(result="False", error=str(error)), 500
+        except Exception as e:
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Exception during bore alignment on: {str(e)}"))
+            return jsonify(result="False", error=str(e)), 500
+
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Bore alignment on successful"))
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Bore alignment ON"))
+        return jsonify(result="True")
+
+    elif command == "borealignoff":
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Received command: " + command))
+        try:
+            success, error = bore_align_off(self)
+            if not success:
+                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Bore alignment off failed: {error}"))
+                return jsonify(result="False", error=str(error)), 500
+        except Exception as e:
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Exception during bore alignment off: {str(e)}"))
+            return jsonify(result="False", error=str(e)), 500
+
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Bore alignment off successful"))
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Ready to Swap!"))
+    
+        return jsonify(result="True")
+
     else:
         self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Command not recognized: {command}"))
         return jsonify(result="False", error="Command not recognized."), 500

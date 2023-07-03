@@ -9,11 +9,11 @@ plugin_author = "BigBrain3D"
 plugin_author_email = "info@bigbrain3D.com"
 plugin_url = "https://github.com/BigBrain3D/Swapper3D_Octoprint_Plugin/"
 plugin_license = "AGPLv3"
-plugin_requires = ["pyserial>=3.5,<4"]
+plugin_requires = ["pyserial>=3.5,<4", "PyGithub"]
 plugin_additional_data = []
 plugin_additional_packages = []
 plugin_ignored_packages = []
-additional_setup_parameters = {"python_requires": ">=3.10,<4"}
+additional_setup_parameters = {"python_requires": ">=3.7,<4"}
 
 try:
     import octoprint_setuptools

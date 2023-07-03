@@ -12,6 +12,11 @@ function Swapper3DViewModel(parameters) {
                 $("#connectionState").val(data.message);
             } else if (data.type === "currentlyLoadedInsert") {
                 $("#currentlyLoadedInsert").val(data.message);
+            } else if (data.type === "firmwareVersion") {
+                $("#installedFirmwareVersion").val(data.message);
+                self.sendCommandToSwapper3D("get latest firmware version");
+            } else if (data.type === "latestFirmwareVersion") {
+                $("#latestFirmwareVersion").val(data.message);
             }
         }
     };
@@ -46,6 +51,16 @@ function Swapper3DViewModel(parameters) {
         self.sendCommandToSwapper3D("swap to", selectedInsert);
     };
 
+    self.boreAlignmentOn = function() {
+        self.logToSwapper3D("Bore alignment on button was clicked");
+        self.sendCommandToSwapper3D("borealignon");
+    };
+
+    self.boreAlignmentOff = function() {
+        self.logToSwapper3D("Bore alignment off button was clicked");
+        self.sendCommandToSwapper3D("borealignoff");
+    };
+
     self.sendCommandToSwapper3D = function(command, insert_number = null) {
         var payload = {
             command: command
@@ -62,7 +77,7 @@ function Swapper3DViewModel(parameters) {
             data: JSON.stringify(payload),
             contentType: "application/json; charset=utf-8",
             success: function(response) {
-                self.logToSwapper3D(command.charAt(0).toUpperCase() + command.slice(1) + " command sent");
+                self.logToSwapper3D(command.charAt(0).toUpperCase() + command.slice(1) + " command successful");
             },
             error: function(jqXHR) {
                 self.logToSwapper3D(command.charAt(0).toUpperCase() + command.slice(1) + " command failed: " + jqXHR.responseText);
@@ -75,6 +90,8 @@ function Swapper3DViewModel(parameters) {
         $('#disconnectSwapper3D').click(self.disconnectSwapper3D);
         $('#unloadInsertButton').click(self.unloadInsert);
         $('#swapToInsertButton').click(self.swapToInsert);
+        $('#boreAlignmentOnButton').click(self.boreAlignmentOn);
+        $('#boreAlignmentOffButton').click(self.boreAlignmentOff);
         $("#currentlyLoadedInsert").val("None");
     };
 }

@@ -1,5 +1,4 @@
 # Octoprint plugin name: Swapper3D, File: Swapper3D_utils.py, Author: BigBrain3D, License: AGPLv3
- 
 # Import required libraries
 import serial
 import serial.tools.list_ports
@@ -20,6 +19,8 @@ def parity_of(input_string):
             value = value & (value - 1)
     return ~count & 1  # returns 1 for odd parity, 0 for even parity
 
+def send_plugin_message(plugin, message):
+    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=message))
 
 def check_parity(plugin, message):
     received_parity_bit = int(message[-1])  # extract the last character from the message
@@ -27,17 +28,116 @@ def check_parity(plugin, message):
     calculated_parity_bit = parity_of(message_without_parity_bit)
     
     if received_parity_bit != calculated_parity_bit:
-        plugin._plugin_manager.send_plugin_message(
-            plugin._identifier, 
-            dict(type="log", message=f"Parity check failed for message: {message_without_parity_bit}")
-        )
+        send_plugin_message(plugin, f"Parity check failed for message: {message_without_parity_bit}")
         return False
     else:
-        plugin._plugin_manager.send_plugin_message(
-            plugin._identifier, 
-            dict(type="log", message=f"Parity check passed for message: {message_without_parity_bit}")
-        )
+        #send_plugin_message(plugin, f"Parity check passed for message: {message_without_parity_bit}")
         return True
+
+# Write a message with parity to the serial connection
+def write_message_with_parity(plugin, message):
+    parity_bit = parity_of(message)
+    send_plugin_message(plugin, f"Parity bit for '{message}': {parity_bit}")
+    plugin.serial_conn.write((message + str(parity_bit) + '\n').encode())
+
+# Read a response from the serial connection and check its parity
+def read_and_check_response(plugin):
+    response = plugin.serial_conn.readline().decode('utf-8')
+    print(f"Raw response: {repr(response)}")
+    
+    # Check if the response is a complete line
+    if not response.endswith('\n'):
+        print("Incomplete response received, ignoring.")
+        return None, None
+
+    response = response.strip()
+
+    # Check if the response is not empty before attempting to check the parity
+    if response:
+        received_parity_bit = int(response[-1])  # extract the last character from the message
+        message_without_parity_bit = response[:-1]
+        calculated_parity_bit = parity_of(message_without_parity_bit)
+
+        if received_parity_bit != calculated_parity_bit:
+            send_plugin_message(plugin, f"Parity check failed for message: {response}")
+            return False, None
+        else:
+            return True, message_without_parity_bit
+    else:
+        send_plugin_message(plugin, "Received empty response")
+        return None, None
+
+
+
+
+# Abstract the common operations of swap_to_insert and unload_insert into one function
+def perform_command(plugin, command):
+    write_message_with_parity(plugin, command)
+    time.sleep(1)
+
+    # Keep reading responses until an OK is received
+    while True:
+        check_response, response = read_and_check_response(plugin)
+
+        # If the response is empty, continue reading responses
+        if check_response is None:
+            continue
+        elif check_response:
+            send_plugin_message(plugin, response)
+            if response and response.startswith("ok"):
+                return True, None
+        else:
+            send_plugin_message(plugin, f"Command '{command}' failed.")
+            return False, "Parity check did not pass."
+
+
+
+def swap_to_insert(plugin, insert_number):
+    command = f"load_insert{insert_number}"
+    send_plugin_message(plugin, f"Sending command to load_insert insert {insert_number}")
+    return perform_command(plugin, command)
+
+def unload_insert(plugin):
+    commands = [
+        "unload_connect",
+        # The printer is told to extrude here. You need to implement this functionality.
+        "unload_pulldown",
+        "unload_deploycutter",
+        "unload_cut",
+        # Check settings and if Palette, then extrude from printer and cut from swapper.
+        # The implementation of these operations depends on your system setup.
+        "unload_AvoidBin",  # Palette only.
+        #retract filament
+        "unload_stowCutter",
+        "unload_dumpWaste",  # Palette only.
+        "unloaded_message"
+    ]
+
+    for command in commands:
+        send_plugin_message(plugin, f"Sending command to {command}")
+        success, error = perform_command(plugin, command)
+
+        # Depending on your system, you may want to stop the loop if a command fails.
+        # If so, uncomment the following lines:
+        # if response != "OK":
+        #     return response
+
+    return "OK"  # Return OK if all commands were successfully executed.
+
+
+def get_firmware_version(plugin):
+    version_parts = []
+    for command in ["readmajor", "readminor", "readpatch"]:
+        result, error = perform_command(plugin, command)
+        if result:
+            version_part = plugin.serial_conn.readline().decode('utf-8').strip()[:-1]
+            version_parts.append(version_part)
+        else:
+            send_plugin_message(plugin, f"Failed to get part of firmware version with command '{command}': {error}")
+            return None, error
+
+    return '.'.join(version_parts), None
+
 
 
 def try_handshake(plugin):
@@ -53,10 +153,10 @@ def try_handshake(plugin):
 
             attempts = 3
             while attempts > 0:
-                plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Sending handshake message 'Octoprint'..."))
+                plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Sending handshake message 'octoprint'..."))
                 message = 'octoprint'
                 parity_bit = parity_of(message)
-                plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Parity bit for 'Octoprint': {parity_bit}"))
+                plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Parity bit for 'octoprint': {parity_bit}"))
                 ser.write((message + str(parity_bit) + '\n').encode())
                 time.sleep(1)
 
@@ -83,80 +183,3 @@ def try_handshake(plugin):
             plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Failed to connect to {port}: {e}"))
     return None, "Failed to connect to any port"
 
-
-
-def swap_to_insert(plugin, insert_number):
-    try:
-        swap_command = f"swap{insert_number}"
-        
-        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Sending command to swap to insert {insert_number}"))
-        
-        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Serial connection {plugin.serial_conn}"))
-        
-        message = swap_command
-        parity_bit = parity_of(message)
-        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Parity bit for '{swap_command}': {parity_bit}"))
-        plugin.serial_conn.write((message + str(parity_bit) + '\n').encode())  # Use the serial connection saved in plugin
-        time.sleep(1)
-
-        # Retry up to 3 times if the parity of the incoming message fails
-        attempts = 0
-        while attempts < 3:
-            response = plugin.serial_conn.readline().decode('utf-8').strip()  # Use the serial connection saved in plugin
-            plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Received: {response}"))
-
-            if check_parity(plugin, response):
-                if response[:-1].startswith("ok"):
-                    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Swap to insert {insert_number} was successful."))
-                    return True, None
-                else:
-                    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Swap to insert failed with response: {response}"))
-                    return False, response
-            attempts += 1
-
-        # If reached here, all attempts failed.
-        error_message = "All attempts failed, parity check did not pass."
-        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=error_message))
-        return False, error_message
-
-    except Exception as e:
-        error_message = str(e)
-        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Failed to swap to insert: {error_message}"))
-        return False, error_message
-
-def unload_insert(plugin):
-    try:
-        unload_command = "unload"
-
-        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Sending command to unload"))
-
-        message = unload_command
-        parity_bit = parity_of(message)
-        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Parity bit for '{unload_command}': {parity_bit}"))
-        plugin.serial_conn.write((message + str(parity_bit) + '\n').encode())
-        time.sleep(1)
-
-        # Retry up to 3 times if the parity of the incoming message fails
-        attempts = 0
-        while attempts < 3:
-            response = plugin.serial_conn.readline().decode('utf-8').strip()
-            plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Received: {response}"))
-
-            if check_parity(plugin, response):
-                if response[:-1].startswith("ok"):
-                    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Unload was successful."))
-                    return True, None
-                else:
-                    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Unload failed with response: {response}"))
-                    return False, response
-            attempts += 1
-
-        # If reached here, all attempts failed.
-        error_message = "All attempts failed, parity check did not pass."
-        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=error_message))
-        return False, error_message
-
-    except Exception as e:
-        error_message = str(e)
-        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Failed to unload: {error_message}"))
-        return False, error_message

@@ -5,6 +5,19 @@ def get_default_settings():
         yPos = "175",
         zHeight = "95",
         zMotorCurrent = "900",
+        extrudeSpeedPullDown = "20",
+        extrudeSpeedPaletteCuts = "100",
+        motorType = "Standard",
+        totalNumberSwaps = "0",
+        actuations = "0",
+        TR = "0",
+        TH = "0",
+        TL = "0",
+        QL = "0",
+        HR = "0",
+        CR = "0",
+        CA = "0",
+        WA = "0",
         beforeStartGcode = "M906 [zMotorCurrent]",
         initialToolLoadGcode = """
     ;***************Begin SWAPPER3D gcode**********************
@@ -24,7 +37,7 @@ def get_default_settings():
     G1 E20 F800; Move filament to the top of the heatbreak
     ;***************End SWAPPER3D gcode********************** 
     """,
-            toolChangeGcode = """
+        toolChangeGcode = """
     {if current_extruder != next_extruder}
     ;***************Begin SWAPPER3D gcode**********************
     G1 Y175 F10200 ;Break string before Z lift
@@ -69,7 +82,7 @@ def get_default_settings():
     ;***************End SWAPPER3D gcode**********************
     {endif}
     """,
-            beforeEndGcode = """
+        beforeEndGcode = """
     ;***************Begin SWAPPER3D gcode**********************
     G1 Z[zHeight] F1200 ;mmu 82mm, palette 95mm
     G1 X[xPos] Y[yPos] F6000;move to swapper location.
@@ -78,7 +91,7 @@ def get_default_settings():
     M702 C ; Unload filament with MMU
     ;***************End SWAPPER3D gcode**********************
     """,
-            FilamentSwitcherType = "parallel",
-            extraFilamentCutLength = "60",
-            lengthEachCut = "15",
-        )
+        FilamentSwitcherType = "parallel",
+        extraFilamentCutLength = "60",
+        lengthEachCut = "15",
+    )

@@ -67,14 +67,14 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
         return default_settings
 
 
-    def serial_loop(self):
-        while True:
-            if self.serial_conn is None:
-                break
-
-            if self.serial_conn.in_waiting:
-                line = self.serial_conn.readline().decode()
-                self._logger.info("Received from Arduino: " + line)
+    #def serial_loop(self):
+    #    while True:
+    #        if self.serial_conn is None:
+    #            break
+    #
+    #        if self.serial_conn.in_waiting:
+    #            line = self.serial_conn.readline().decode()
+    #            self._logger.info("Received from Arduino: " + line)
 
     def get_update_information(self):
         return dict(
@@ -95,7 +95,7 @@ __plugin_description__ = "A plugin controlling the Swapper3D"
 __plugin_author__ = "BigBrain3D"
 __plugin_url__ = "https://github.com/BigBrain3D/Swapper3D"
 __plugin_license__ = "AGPLv3"
-__plugin_pythoncompat__ = ">=3.10,<4"  # Compatible python versions
+__plugin_pythoncompat__ = ">=3.7,<4"  # Compatible python versions
 __plugin_implementation__ = Swapper3DPlugin()
 
 def __plugin_load__():

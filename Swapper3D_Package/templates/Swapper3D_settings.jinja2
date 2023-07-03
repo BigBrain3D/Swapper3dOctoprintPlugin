@@ -1,42 +1,155 @@
 {# Octoprint plugin name: Swapper3D, File: Swapper3D_settings.jinja2, Author: BigBrain3D, License: AGPLv3 #}
+
+<style>
+.flex-layout {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+.flex-layout label {
+    flex: 1;
+    text-align: right;
+    margin-right: 10px;
+}
+.flex-layout input, .flex-layout select, .flex-layout textarea {
+    flex: 2;
+}
+</style>
+
 <div class="control-group">
     <h4>Print head Swap location</h4>
-    <label for="xPos">X axis position:</label>
-    <input type="text" id="xPos" title="Should be approx 251" data-bind="value: settings.plugins.Swapper3D.xPos" placeholder="Default: 251"><br>
-
-    <label for="yPos">Y axis position:</label>
-    <input type="text" id="yPos" title="Default: 175" data-bind="value: settings.plugins.Swapper3D.yPos" placeholder="Default: 175"><br>
-
-    <label for="zHeight">Minimum Z height:</label>
-    <input type="text" id="zHeight" title="MMU:82, Palette:95" data-bind="value: settings.plugins.Swapper3D.zHeight" placeholder="MMU:82, Palette:95"><br>
-  
-    <label for="zMotorCurrent">Z Motor Current(ma):</label>
-    <input type="text" id="zMotorCurrent" title="Default: 900" data-bind="value: settings.plugins.Swapper3D.zMotorCurrent" placeholder="Default: 900"><br>
-
-    <h4>Gcode Sections</h4>
-    <label for="beforeStartGcode">Before Start Gcode:</label>
-    <textarea id="beforeStartGcode" rows="4" cols="50" data-bind="value: settings.plugins.Swapper3D.beforeStartGcode"></textarea><br>
+    <div class="flex-layout">
+        <label for="xPos">X axis position:</label>
+        <input type="number" id="xPos" title="Should be approx 251" data-bind="value: settings.plugins.Swapper3D.xPos" placeholder="Default: 251">
+    </div>
     
-    <label for="initialToolLoadGcode">Initial Tool Load Gcode:</label>
-    <textarea id="initialToolLoadGcode" rows="4" cols="50" data-bind="value: settings.plugins.Swapper3D.initialToolLoadGcode"></textarea><br>
-
-    <label for="toolChangeGcode">Tool Change Gcode:</label>
-    <textarea id="toolChangeGcode" rows="4" cols="50" data-bind="value: settings.plugins.Swapper3D.toolChangeGcode"></textarea><br>
-
-    <label for="beforeEndGcode">Before End Gcode:</label>
-    <textarea id="beforeEndGcode" rows="4" cols="50" data-bind="value: settings.plugins.Swapper3D.beforeEndGcode"></textarea><br>
+    <div class="flex-layout">
+        <label for="yPos">Y axis position:</label>
+        <input type="number" id="yPos" title="Default: 175" data-bind="value: settings.plugins.Swapper3D.yPos" placeholder="Default: 175">
+    </div>
     
-    <h4>Filament Switcher Type</h4>
-    <label for="FilamentSwitcherType">Select a filament switcher type:</label>
-    <select id="FilamentSwitcherType" data-bind="value: settings.plugins.Swapper3D.FilamentSwitcherType">
-        <option value="parallel">Parallel (i.e. MMU)</option>
-        <option value="linear">Linear (i.e. Palette)</option>
-    </select>
+    <div class="flex-layout">
+        <label for="zHeight">Minimum Z height:</label>
+        <input type="number" id="zHeight" title="MMU:82, Palette:95" data-bind="value: settings.plugins.Swapper3D.zHeight" placeholder="MMU:82, Palette:95">
+    </div>
+    
+    <div class="flex-layout">
+        <label for="zMotorCurrent">Z Motor Current(ma):</label>
+        <input type="number" id="zMotorCurrent" title="Default: 900" data-bind="value: settings.plugins.Swapper3D.zMotorCurrent" placeholder="Default: 900">
+    </div>
+    
+    <div class="flex-layout">
+        <label for="extrudeSpeedPulldown">Extrude speed for pulldown:</label>
+        <input type="number" id="extrudeSpeedPulldown" title="Default: 20" data-bind="value: settings.plugins.Swapper3D.extrudeSpeedPulldown" placeholder="Default: 20">
+    </div>
 
-    <h4>Extra Filament Cut Length on Swap</h4>
-    <label for="extraFilamentCutLength">Specify extra filament cut length on swap:</label>
-    <input type="text" id="extraFilamentCutLength" title="Default: 60" data-bind="value: settings.plugins.Swapper3D.extraFilamentCutLength" placeholder="Default: 60"><br>
+    <div class="flex-layout">
+        <label for="extrudeSpeedPalette">Extrude speed for palette cuts:</label>
+        <input type="number" id="extrudeSpeedPalette" title="Default: 100" data-bind="value: settings.plugins.Swapper3D.extrudeSpeedPalette" placeholder="Default: 100">
+    </div>
+	
+    <div class="flex-layout">
+        <label for="numPaletteCuts">Number of palette cuts:</label>
+        <input type="number" id="numPaletteCuts" title="Default: 3" data-bind="value: settings.plugins.Swapper3D.numPaletteCuts" placeholder="Default: 3">
+    </div>
 
-    <label for="lengthEachCut">Specify length of each cut:</label>
-    <input type="text" id="lengthEachCut" title="Default: 15" data-bind="value: settings.plugins.Swapper3D.lengthEachCut" placeholder="Default: 15">
+    <div class="flex-layout">
+        <label for="lengthAdditionalCut">Length of each additional cut:</label>
+        <input type="number" id="lengthAdditionalCut" title="Default: 15" data-bind="value: settings.plugins.Swapper3D.lengthAdditionalCut" placeholder="Default: 15">
+    </div>
+
+    <div class="flex-layout">
+        <label for="motorType">Motor type:</label>
+        <select id="motorType" data-bind="value: settings.plugins.Swapper3D.motorType">
+            <option value="standard">Standard</option>
+            <option value="brushless">Brushless</option>
+        </select>
+    </div>
+	
+	<div class="flex-layout">
+        <label for="filamentSwitcherType">Filament switcher type:</label>
+        <select id="filamentSwitcherType" data-bind="value: settings.plugins.Swapper3D.filamentSwitcherType">
+            <option value="MMU" selected>MMU</option>
+            <option value="Palette">Palette</option>
+            <option value="None">None</option>
+        </select>
+    </div>
+</div>
+
+<div class="control-group">
+    <h4>Gcode Blocks</h4>
+
+    <div class="flex-layout">
+        <label for="beforeStartGcode">Before start Gcode:</label>
+        <textarea id="beforeStartGcode" data-bind="value: settings.plugins.Swapper3D.beforeStartGcode"></textarea>
+    </div>
+
+    <div class="flex-layout">
+        <label for="initialToolLoadGcode">Initial tool load Gcode:</label>
+        <textarea id="initialToolLoadGcode" data-bind="value: settings.plugins.Swapper3D.initialToolLoadGcode"></textarea>
+    </div>
+
+    <div class="flex-layout">
+        <label for="toolChangeGcode">Tool change Gcode:</label>
+        <textarea id="toolChangeGcode" data-bind="value: settings.plugins.Swapper3D.toolChangeGcode"></textarea>
+    </div>
+
+    <div class="flex-layout">
+        <label for="beforeEndGcode">Before end Gcode:</label>
+        <textarea id="beforeEndGcode" data-bind="value: settings.plugins.Swapper3D.beforeEndGcode"></textarea>
+    </div>
+</div>
+
+<div class="control-group">
+    <h4>Statistics</h4>
+
+    <div class="flex-layout">
+        <label for="totalSwaps">Total Number of Swaps:</label>
+        <input type="number" id="totalSwaps" data-bind="value: settings.plugins.Swapper3D.totalSwaps">
+    </div>
+
+    <div class="flex-layout">
+        <label for="actuations">Actuations:</label>
+        <input type="number" id="actuations" data-bind="value: settings.plugins.Swapper3D.actuations">
+    </div>
+
+    <div class="flex-layout">
+        <label for="tr">TR:</label>
+        <input type="number" id="tr" data-bind="value: settings.plugins.Swapper3D.tr">
+    </div>
+
+    <div class="flex-layout">
+        <label for="th">TH:</label>
+        <input type="number" id="th" data-bind="value: settings.plugins.Swapper3D.th">
+    </div>
+
+    <div class="flex-layout">
+        <label for="tl">TL:</label>
+        <input type="number" id="tl" data-bind="value: settings.plugins.Swapper3D.tl">
+    </div>
+
+    <div class="flex-layout">
+        <label for="ql">QL:</label>
+        <input type="number" id="ql" data-bind="value: settings.plugins.Swapper3D.ql">
+    </div>
+
+    <div class="flex-layout">
+        <label for="hr">HR:</label>
+        <input type="number" id="hr" data-bind="value: settings.plugins.Swapper3D.hr">
+    </div>
+
+    <div class="flex-layout">
+        <label for="cr">CR:</label>
+        <input type="number" id="cr" data-bind="value: settings.plugins.Swapper3D.cr">
+    </div>
+
+    <div class="flex-layout">
+        <label for="ca">CA:</label>
+        <input type="number" id="ca" data-bind="value: settings.plugins.Swapper3D.ca">
+    </div>
+
+    <div class="flex-layout">
+        <label for="wa">WA:</label>
+        <input type="number" id="wa" data-bind="value: settings.plugins.Swapper3D.wa">
+    </div>
 </div>
