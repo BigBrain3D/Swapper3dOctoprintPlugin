@@ -9,7 +9,7 @@ plugin_author = "BigBrain3D"
 plugin_author_email = "info@bigbrain3D.com"
 plugin_url = "https://github.com/BigBrain3D/Swapper3D_Octoprint_Plugin/"
 plugin_license = "AGPLv3"
-plugin_requires = ["pyserial>=3.5,<4"] #, "PyGithub"] py git hub causes the plugin to not load because it needs to install rust and cryptography libraries which are not part of the default octoprint image
+plugin_requires = ["pyserial>=3.5,<4"]
 plugin_additional_data = []
 plugin_additional_packages = []
 plugin_ignored_packages = []
