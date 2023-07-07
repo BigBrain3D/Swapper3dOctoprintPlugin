@@ -2,7 +2,6 @@
 
 from flask import request, jsonify
 from .Swapper3D_utils import * #import all methods
-from .firmware_utils import download_latest_firmware
 from .Swap_utils import *
 import time
 
@@ -112,56 +111,6 @@ def handle_command(self):
         self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Unload successful"))
         return jsonify(result="True")
         
-        
-    elif command == "get firmware version":
-        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Received command: " + command))
-        try:
-            success, error = get_firmware_version(self)
-            if not success:
-                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Get firmware version failed: {error}"))
-                return jsonify(result="False", error=str(error)), 500
-        except Exception as e:
-            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Exception during getting firmware version: {str(e)}"))
-            return jsonify(result="False", error=str(e)), 500
-
-        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Firmware version: {success}"))
-        self._plugin_manager.send_plugin_message(self._identifier, dict(type="firmwareVersion", message=str(success)))  # Add this line
-        return jsonify(result=str(success))
-    elif command == "get latest firmware version":
-        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Received command: " + command))
-        try:
-            response = requests.get("https://api.github.com/repos/BigBrain3D/Swapper3D_Firmware/releases/latest")
-            response.raise_for_status()  # Raise exception if the request failed
-            latest_version = response.json()["tag_name"]
-
-        except Exception as e:
-            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Exception during getting latest firmware version: {str(e)}"))
-            return jsonify(result="False", error=str(e)), 500
-
-        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Latest firmware version: {latest_version}"))
-        self._plugin_manager.send_plugin_message(self._identifier, dict(type="latestFirmwareVersion", message=latest_version))
-        return jsonify(result=latest_version)
-    elif command == "install runtime firmware":
-        self._logger.info("The 'install runtime firmware' command has been triggered.")
-        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Received command: " + command))
-        try:
-            download_latest_firmware(self, "runtime_firmware")  # Download the latest runtime firmware
-            # TODO: Implement the installation (flashing) of the firmware to your device
-            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Firmware installed successfully"))
-        except Exception as e:
-            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Exception during installing firmware: {str(e)}"))
-            return jsonify(result="False", error=str(e)), 500
-
-    elif command == "install servo setup firmware":
-        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Received command: " + command))
-        try:
-            download_latest_firmware(self, "servo_setup")  # Download the latest servo setup firmware
-            # TODO: Implement the installation (flashing) of the servo setup firmware to your device
-            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Servo setup firmware installed successfully"))
-        except Exception as e:
-            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Exception during installing servo setup firmware: {str(e)}"))
-            return jsonify(result="False", error=str(e)), 500
-
     elif command == "borealignon":
         self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Received command: " + command))
         try:
