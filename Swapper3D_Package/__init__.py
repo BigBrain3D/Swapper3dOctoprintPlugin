@@ -7,6 +7,8 @@ import threading
 from .commands import handle_command
 from .gcode_injector import inject_gcode
 from .default_settings import get_default_settings
+from .Swap_utils import bore_align_on, bore_align_off
+
 
 class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                       octoprint.plugin.TemplatePlugin,
@@ -45,7 +47,29 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
 
             # return the modified gcode
             return [(line, cmd_type, gcode, subcode, tags) for line in injected_gcode]
+    
+    def on_gcode_received(self, comm, line, *args, **kwargs):
+        # Check if the line contains our echo (case insensitive)
+        if "readyforborealignment" in line.lower():
+            # Finally, turn on bore alignment
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Received command: borealignon"))
+            try:
+                success, error = bore_align_on(self)
+                if not success:
+                    self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Bore alignment on failed: {error}"))
+                    return line
+            except Exception as e:
+                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Exception during bore alignment on: {str(e)}"))
+                return line
 
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Bore alignment on successful"))
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Ready to Swap!"))
+            
+        return line
+
+
+
+            
     def get_template_configs(self):
         return [
             {"type": "settings", "custom_bindings": False}
@@ -101,6 +125,7 @@ __plugin_implementation__ = Swapper3DPlugin()
 def __plugin_load__():
     global __plugin_hooks__
     __plugin_hooks__ = {
+        "octoprint.comm.protocol.gcode.received": __plugin_implementation__.on_gcode_received,
         "octoprint.comm.protocol.gcode.queuing": __plugin_implementation__.hook_gcode_queuing
     }
     

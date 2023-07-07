@@ -114,17 +114,14 @@ def handle_command(self):
     elif command == "borealignon":
         self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Received command: " + command))
         try:
-            success, error = bore_align_on(self)
-            if not success:
-                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Bore alignment on failed: {error}"))
-                return jsonify(result="False", error=str(error)), 500
+            positioned_for_bore_alignment(self)  # Call the positioning function instead of success and error check
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Bore alignment on successful"))
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Bore alignment ON"))
+            return jsonify(result="True")
         except Exception as e:
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Exception during bore alignment on: {str(e)}"))
             return jsonify(result="False", error=str(e)), 500
 
-        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Bore alignment on successful"))
-        self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Bore alignment ON"))
-        return jsonify(result="True")
 
     elif command == "borealignoff":
         self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Received command: " + command))
