@@ -11,7 +11,7 @@ def positioned_for_bore_alignment(plugin):
     gcode_commands = [
         f"G1 Z{str(min_z_height)}",  # Raise Z to the min Z height
         "M84 X",  # Keep the X-axis stepper motors enabled indefinitely
-        'M117 E1 "ReadyForBoreAlignment"', # Echo command
+        'M118 E1 "ReadyForBoreAlignment"', # Echo command
     ]
 
     send_plugin_message(plugin, f"Sending commands to printer to position extruder for Swap")
