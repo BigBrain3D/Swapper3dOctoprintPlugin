@@ -52,7 +52,7 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
         # Check if the line contains our echo (case insensitive)
         if "readyforborealignment" in line.lower():
             # Finally, turn on bore alignment
-            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Received command: borealignon"))
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="command echo from printer: borealignon"))
             try:
                 success, error = bore_align_on(self)
                 if not success:
@@ -62,8 +62,8 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                 self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Exception during bore alignment on: {str(e)}"))
                 return line
 
-            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Bore alignment on successful"))
-            self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Ready to Swap!"))
+            #self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Bore alignment on successful"))
+            #self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Ready to Swap!"))
             
         return line
 

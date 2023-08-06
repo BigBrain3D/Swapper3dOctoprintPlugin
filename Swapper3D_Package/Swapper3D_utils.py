@@ -104,9 +104,9 @@ def unload_insert(plugin):
         "unload_pulldown",
         "unload_deploycutter",
         "unload_cut",
+        #Unload stow insert goes here!
         # Check settings and if Palette, then extrude from printer and cut from swapper.
         # The implementation of these operations depends on your system setup.
-        "unload_AvoidBin",  # Palette only.
         #retract filament
         "unload_stowCutter",
         "unload_dumpWaste",  # Palette only.

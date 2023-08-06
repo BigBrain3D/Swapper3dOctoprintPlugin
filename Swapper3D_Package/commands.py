@@ -110,19 +110,21 @@ def handle_command(self):
 
         self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Unload successful"))
         return jsonify(result="True")
-        
+
     elif command == "borealignon":
-        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Received command: " + command))
         try:
-            positioned_for_bore_alignment(self)  # Call the positioning function instead of success and error check
-            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Bore alignment on successful"))
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Received command: " + command))
+            #The bore alignment and swaps can only occur after the printer is in position. 
+            #The only way to check if the printer is in position is to send a G1 -> G4 -> M118 "Message", 
+            #then listen for incoming messages from the printer, When the "Message" is received then all the movement 
+            #commands in the printer queue have completed and a swap can commence.
+            position_for_bore_alignment(self)  # Call the positioning function instead of success and error check
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Bore alignment ON"))
             return jsonify(result="True")
         except Exception as e:
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Exception during bore alignment on: {str(e)}"))
             return jsonify(result="False", error=str(e)), 500
-
-
+        
     elif command == "borealignoff":
         self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Received command: " + command))
         try:

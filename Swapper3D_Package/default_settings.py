@@ -1,8 +1,8 @@
 # Octoprint plugin name: Swapper3D, File: default_settings.py, Author: BigBrain3D, License: AGPLv3
 def get_default_settings():
     return dict(
-        xPos = "251",
-        yPos = "175",
+        xPos = "250",
+        yPos = "210",
         zHeight = "95",
         zMotorCurrent = "900",
         extrudeSpeedPullDown = "20",
