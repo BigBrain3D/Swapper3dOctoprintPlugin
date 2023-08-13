@@ -44,12 +44,19 @@ function Swapper3DViewModel(parameters) {
         self.sendCommandToSwapper3D("unload");
     };
 
-    self.swapToInsert = function(event) {
-        event.preventDefault();
-        var selectedInsert = $("#insertDropdown").val();
-        self.logToSwapper3D("SwapToInsert button was clicked: " + selectedInsert);
-        self.sendCommandToSwapper3D("swap to", selectedInsert);
-    };
+	self.swapToInsert = function(event) {
+		event.preventDefault();
+		var selectedInsert = $("#insertDropdown").val();
+		
+		//subtract 1 from the selected insert before sending
+		var adjustedInsert = parseInt(selectedInsert, 10) - 1; // use parseInt to ensure adjustInsert is an integer
+		if (isNaN(adjustedInsert)) {
+		   self.logToSwapper3D("Error: selected value not a number");
+		   return;
+		}
+		self.logToSwapper3D("SwapToInsert button was clicked: " + adjustedInsert);
+		self.sendCommandToSwapper3D("swap to", adjustedInsert.toString());
+	};
 
     self.boreAlignmentOn = function() {
         self.logToSwapper3D("Bore alignment on button was clicked");

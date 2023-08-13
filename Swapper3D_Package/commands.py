@@ -100,10 +100,10 @@ def handle_command(self):
     elif command == "unload":
         self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Received command: " + command))
         try:
-            success, error = unload_insert(self)
-            if not success:
-                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Unload failed: {error}"))
-                return jsonify(result="False", error=str(error)), 500
+            unload_result = unload_insert(self)
+            if unload_result != "OK":
+                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Unload failed: {unload_result}"))
+                return jsonify(result="False", error=unload_result), 500
         except Exception as e:
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Exception during unload: {str(e)}"))
             return jsonify(result="False", error=str(e)), 500
@@ -118,7 +118,11 @@ def handle_command(self):
             #The only way to check if the printer is in position is to send a G1 -> G4 -> M118 "Message", 
             #then listen for incoming messages from the printer, When the "Message" is received then all the movement 
             #commands in the printer queue have completed and a swap can commence.
-            position_for_bore_alignment(self)  # Call the positioning function instead of success and error check
+            
+            HomeAxis = True  # Assuming you want to Home Axis when borealignon command is received
+            current_z = 0  # Assuming the Z-position is 0 at this point
+            PreparePrinterForSwap(self, current_z, HomeAxis)
+            
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Bore alignment ON"))
             return jsonify(result="True")
         except Exception as e:

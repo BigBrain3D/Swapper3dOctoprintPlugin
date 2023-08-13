@@ -75,8 +75,11 @@ def perform_command(plugin, command):
     write_message_with_parity(plugin, command)
     time.sleep(1)
 
+    send_plugin_message(plugin, f"Sending command {command} to Swapper3D")
+
     # Keep reading responses until an OK is received
     while True:
+    
         check_response, response = read_and_check_response(plugin)
 
         # If the response is empty, continue reading responses
@@ -98,29 +101,74 @@ def swap_to_insert(plugin, insert_number):
     return perform_command(plugin, command)
 
 def unload_insert(plugin):
-    commands = [
-        "unload_connect",
+    # Check the printer is connected
+    if not plugin._printer.is_operational():
+        send_plugin_message(plugin, "Printer must be connected to Swap!")
+        return "Printer not connected" 
+
+    #Commented for testing
+    #uncomment for production
+    # # Check the hotend temperature
+    # hotend_temp = plugin._printer.get_current_temperatures()['tool0']['actual']
+    # if hotend_temp < 200:
+        # send_plugin_message(plugin, "Hotend temperature is less than 200C")
+        # return "Hotend too cold to Swap!" 
+    
+    # Get the setting
+    filamentSwitcherType = plugin._settings.get(["filamentSwitcherType"])
+
+    if filamentSwitcherType != "Palette":
+        send_plugin_message(plugin, "Executing Parallel unload")
+        
+        perform_command(plugin, "unload_connect")
+        perform_command(plugin, "unload_pulldown")
+        
         # The printer is told to extrude here. You need to implement this functionality.
-        "unload_pulldown",
-        "unload_deploycutter",
-        "unload_cut",
-        #Unload stow insert goes here!
-        # Check settings and if Palette, then extrude from printer and cut from swapper.
-        # The implementation of these operations depends on your system setup.
+        # Extrude filament at the same time as the pulldown
+        gcode_commands = ["G92 E0 ;reset extrusion distance"
+                         ,"G1 E55.000 F3960.0"]
+        plugin._printer.commands(gcode_commands)
+        
+        
+        perform_command(plugin, "unload_deploycutter")
+        perform_command(plugin, "unload_cut")
+        perform_command(plugin, "unload_stowInsert")
+        
         #retract filament
-        "unload_stowCutter",
-        "unload_dumpWaste",  # Palette only.
-        "unloaded_message"
-    ]
-
-    for command in commands:
-        send_plugin_message(plugin, f"Sending command to {command}")
-        success, error = perform_command(plugin, command)
-
-        # Depending on your system, you may want to stop the loop if a command fails.
-        # If so, uncomment the following lines:
-        # if response != "OK":
-        #     return response
+        # Send the G-code commands to prepare for swap
+        gcode_commands = ["G92 E0 ;reset extrusion distance"
+                         ,"G1 E-70.000 F3960.0"]
+        
+        plugin._printer.commands(gcode_commands)
+        perform_command(plugin, "unload_stowCutter")
+        
+    else:
+        send_plugin_message(plugin, "Executing Serial unload")
+        
+        perform_command(plugin, "unload_connect")
+        perform_command(plugin, "unload_pulldown")
+        
+        # The printer is told to extrude here. You need to implement this functionality.
+        # Extrude filament at the same time as the pulldown
+        gcode_commands = ["G92 E0 ;reset extrusion distance"
+                         ,"G1 E55.000 F3960.0"]
+        plugin._printer.commands(gcode_commands)
+        
+        
+        perform_command(plugin, "unload_deploycutter_guide") #palette only
+        perform_command(plugin, "unload_deploycutter")
+        perform_command(plugin, "unload_cut")
+        perform_command(plugin, "unload_stowInsert")
+        #extrude then cut    #palette only
+        
+        #retract filament
+        # Send the G-code commands to prepare for swap
+        gcode_commands = ["G92 E0 ;reset extrusion distance"
+                         ,"G1 E-70.000 F3960.0"]
+        
+        plugin._printer.commands(gcode_commands)
+        perform_command(plugin, "unload_stowCutter")
+        perform_command(plugin, "unload_dumpWaste")  # Palette only.
 
     return "OK"  # Return OK if all commands were successfully executed.
 
