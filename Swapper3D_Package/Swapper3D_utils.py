@@ -95,7 +95,7 @@ def perform_command(plugin, command):
 
 
 
-def swap_to_insert(plugin, insert_number):
+def load_insert(plugin, insert_number):
     command = f"load_insert{insert_number}"
     send_plugin_message(plugin, f"Sending command to load_insert insert {insert_number}")
     return perform_command(plugin, command)
@@ -121,26 +121,36 @@ def unload_insert(plugin):
         send_plugin_message(plugin, "Executing Parallel unload")
         
         perform_command(plugin, "unload_connect")
-        perform_command(plugin, "unload_pulldown")
         
-        # The printer is told to extrude here. You need to implement this functionality.
-        # Extrude filament at the same time as the pulldown
+        perform_command(plugin, "unload_pulldown_lockingheight")
+
+        #locking height
+        # Extrude filament at the same time as the pulldown 
+		#was F3960
         gcode_commands = ["G92 E0 ;reset extrusion distance"
-                         ,"G1 E55.000 F3960.0"]
+                         ,"G1 E5.000 F5000.0"] 
+        plugin._printer.commands(gcode_commands)
+        
+        time.sleep(1)
+
+        #cutting height
+        perform_command(plugin, "unload_pulldown_cuttingheight")
+        gcode_commands = ["G92 E0 ;reset extrusion distance"
+                         ,"G1 E55.000 F5000.0"] 
         plugin._printer.commands(gcode_commands)
         
         
-        perform_command(plugin, "unload_deploycutter")
-        perform_command(plugin, "unload_cut")
-        perform_command(plugin, "unload_stowInsert")
+       # perform_command(plugin, "unload_deploycutter")
+       # perform_command(plugin, "unload_cut")
+       # perform_command(plugin, "unload_stowInsert")
         
-        #retract filament
+        # retract filament
         # Send the G-code commands to prepare for swap
-        gcode_commands = ["G92 E0 ;reset extrusion distance"
-                         ,"G1 E-70.000 F3960.0"]
+        # gcode_commands = ["G92 E0 ;reset extrusion distance"
+                         # ,"G1 E-70.000 F3960.0"]
         
-        plugin._printer.commands(gcode_commands)
-        perform_command(plugin, "unload_stowCutter")
+        # plugin._printer.commands(gcode_commands)
+        # perform_command(plugin, "unload_stowCutter")
         
     else:
         send_plugin_message(plugin, "Executing Serial unload")
