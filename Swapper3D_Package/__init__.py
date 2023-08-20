@@ -1,4 +1,4 @@
-# Octoprint plugin name: Swapper3D, File: __init__.py, Author: BigBrain3D, License: AGPLv3
+# Octoprint plugin name: Swapper3D, File: __init__.py, Author: BigBrain3D, License: AGPLv3 
 import os
 import time
 import octoprint.plugin

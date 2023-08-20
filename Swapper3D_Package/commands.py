@@ -1,4 +1,4 @@
-# Octoprint plugin name: Swapper3D, File: commands.py, Author: BigBrain3D, License: AGPLv3
+# Octoprint plugin name: Swapper3D, File: commands.py, Author: BigBrain3D, License: AGPLv3 
 
 from flask import request, jsonify
 from .Swapper3D_utils import * #import all methods

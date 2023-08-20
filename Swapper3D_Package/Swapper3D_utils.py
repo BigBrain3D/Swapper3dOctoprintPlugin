@@ -1,4 +1,4 @@
-# Octoprint plugin name: Swapper3D, File: Swapper3D_utils.py, Author: BigBrain3D, License: AGPLv3
+# Octoprint plugin name: Swapper3D, File: Swapper3D_utils.py, Author: BigBrain3D, License: AGPLv3 
 # Import required libraries
 import serial
 import serial.tools.list_ports
