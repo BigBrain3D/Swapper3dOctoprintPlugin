@@ -8,7 +8,7 @@ from .commands import handle_command
 from .gcode_injector import inject_gcode
 from .default_settings import get_default_settings
 from .Swap_utils import bore_align_on, bore_align_off
-
+from .version import __version__
 
 class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                       octoprint.plugin.TemplatePlugin,
@@ -160,8 +160,9 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
             )
         )
 
+
 __plugin_name__ = "Swapper3D"
-__plugin_version__ = "0.1.43"
+__plugin_version__ = __version__ #"0.1.43"
 __plugin_description__ = "An Octoprint plugin for Controlling the Swapper3D"
 __plugin_author__ = "BigBrain3D"
 __plugin_url__ = "https://github.com/BigBrain3D/Swapper3dOctoprintPlugin"
@@ -173,7 +174,11 @@ def __plugin_load__():
     global __plugin_hooks__
     __plugin_hooks__ = {
         "octoprint.comm.protocol.gcode.received": __plugin_implementation__.on_gcode_received,
-        "octoprint.comm.protocol.gcode.queuing": __plugin_implementation__.hook_gcode_queuing
+        "octoprint.comm.protocol.gcode.queuing": __plugin_implementation__.hook_gcode_queuing,
+        "octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.get_update_information
     }
     
-    
+def get_update_hooks(self):
+    return {
+        "octoprint.plugin.softwareupdate.check_config": self.get_update_information
+    }
