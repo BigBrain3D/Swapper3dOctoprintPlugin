@@ -55,7 +55,7 @@ function Swapper3DViewModel(parameters) {
 		   return;
 		}
 		self.logToSwapper3D("SwapToInsert button was clicked: " + adjustedInsert);
-		self.sendCommandToSwapper3D("swap to", adjustedInsert.toString());
+		self.sendCommandToSwapper3D("load_insert", adjustedInsert.toString());
 	};
 
     self.boreAlignmentOn = function() {

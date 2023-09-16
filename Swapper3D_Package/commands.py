@@ -63,7 +63,7 @@ def handle_command(self):
         return jsonify(result="True")
 
 
-    elif command == "swap to":
+    elif command == "load_insert":
         insert_number = data.get("insert_number")
 
         # Debug log: Print the raw 'insert_number' value received
@@ -83,7 +83,7 @@ def handle_command(self):
         self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Attempting to swap to insert#: {insert_number}"))
 
         try:
-            success, error = swap_to_insert(self, insert_number)
+            success, error = load_insert(self, insert_number)
             if not success:
                 self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Failed to swap to insert: {error}"))
                 return jsonify(result="False", error=str(error)), 500
@@ -121,7 +121,7 @@ def handle_command(self):
             
             HomeAxis = True  # Assuming you want to Home Axis when borealignon command is received
             current_z = 0  # Assuming the Z-position is 0 at this point
-            PreparePrinterForSwap(self, current_z, HomeAxis)
+            PreparePrinterForSwap(self, current_z, HomeAxis, "readyforborealignment")
             
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Bore alignment ON"))
             return jsonify(result="True")

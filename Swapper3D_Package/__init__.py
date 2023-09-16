@@ -25,6 +25,9 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
         self.tool_change_occurred = False
         self.log_file_path = os.path.join(os.path.dirname(__file__), 'gcode', f'gcode_{int(time.time())}.txt')
         os.makedirs(os.path.dirname(self.log_file_path), exist_ok=True)
+        self.is_print_started = False #custom flag to track if we already injected the start print commands needed for the swapper
+        self.current_extruder = None  # Initialize current_extruder as None
+        self.next_extruder = None  # Initialize next_extruder as None
 
     def on_event(self, event, payload):
         if event == "PrintStarted":
@@ -34,20 +37,52 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
             self._logger.info("Created a new log file at start of print: " + self.log_file_path)
             
     def on_after_startup(self):
-        self._logger.info("Swapper3D has started!")
+        self._logger.info("Swapper3D plugin has started!")
 
     def hook_gcode_queuing(self, comm_instance, phase, cmd, cmd_type, gcode, subcode=None, tags=None, *args, **kwargs):
+        #return if the printer is not connected
+        #return if there is no print running
         if not self._printer.is_operational() or not self._printer.is_printing():
+            return (cmd, cmd_type, gcode, subcode, tags)
+        
+        #is the Swapper3D is disconnected then don't do any swap prep or swaps
+        if self.serial_conn is None:
+            return (cmd, cmd_type, gcode, subcode, tags)
+
+        #return if gcode is empty
+        if not gcode:
+            return (cmd, cmd_type, gcode, subcode, tags)
+            
+        #return if the gcode is not a Tool change
+        # If the command is a 'T' command, we need to update the current_extruder and next_extruder
+        if not gcode.startswith("T"):
+            return (cmd, cmd_type, gcode, subcode, tags)
+        
+        self.next_extruder = cmd[1:]  # Capture everything after T as the current extruder (e.g., for T1, current_extruder will be '1')
+
+        # Check if it's the start of the print
+        if not self.is_print_started:
+            z_motor_current = self._settings.get(["zMotorCurrent"])
+            self._printer.commands(f"M906 {z_motor_current}")  # insert the command
+            self.is_print_started = True  # Update the flag after the start of the print
+            return (cmd, cmd_type, gcode, subcode, tags)
+
+
+        #return if the next Tool is the same as the current Tool
+        #if the current and next T command are the same exit without Swapping
+        #also return an empty GCODE so that the filament switcher doesn't waste time removing and adding the exact same filament
+        #will this mess with the palette or P2PP because they may have extra length to account for that extra tool change???????
+        if self.current_extruder == self.next_extruder:
             return
+            
+        HomeAxis = False  # Assuming you want to Home Axis when borealignon command is received
+        current_z = self._printer.get_current_data()["currentZ"]   # Get the current Z height
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="current_z", message=str(current_z)))
+        PreparePrinterForSwap(self, current_z, HomeAxis, "readyforswap")#suspend all gcode queueing until the swap is complete in on_gcode_received
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="currentlyLoadedInsert", message=str(insert_number)))
+        return
 
-        if gcode:
-            injected_gcode, self.initial_tool_load, self.tool_change_occurred = inject_gcode(
-                cmd, self._settings, self.initial_tool_load, self.tool_change_occurred, self._logger, self.log_file_path
-            )
 
-            # return the modified gcode
-            return [(line, cmd_type, gcode, subcode, tags) for line in injected_gcode]
-    
     def on_gcode_received(self, comm, line, *args, **kwargs):
         # Check if the line contains our echo (case insensitive)
         if "readyforborealignment" in line.lower():
@@ -55,6 +90,9 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="command echo from printer: borealignon"))
             try:
                 success, error = bore_align_on(self)
+                
+                self._printer.commands("@resume")
+
                 if not success:
                     self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Bore alignment on failed: {error}"))
                     return line
@@ -62,9 +100,30 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                 self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Exception during bore alignment on: {str(e)}"))
                 return line
 
-            #self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Bore alignment on successful"))
-            #self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Ready to Swap!"))
-            
+        if "readyforswap" in line.lower():
+            # Finally, turn on bore alignment
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="command echo from printer: readyforswap"))
+            try:
+                success, error = swap(self)
+                
+                #insert the tool command here so that the filament is switched
+                gcode_commands = f"T{self.next_extruder}"
+                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Injecting Tool change: {gcode_commands}"))
+                self._printer.commands(gcode_commands)
+                
+                #what about the wipe?
+                
+                self.current_extruder = self.next_extruder  # current_extruder becomes next_extruder
+                self.next_extruder = None
+                self._printer.commands("@resume")
+
+                if not success:
+                    self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Swap failed: {error}"))
+                    return line
+            except Exception as e:
+                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Exception during Swap: {str(e)}"))
+                return line
+                
         return line
 
 
