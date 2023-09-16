@@ -200,12 +200,17 @@ def get_firmware_version(plugin):
 
 def try_handshake(plugin):
     arduino_ports = [port.device for port in serial.tools.list_ports.comports() if 'Arduino Uno' in port.description]
-    other_ports = [port.device for port in serial.tools.list_ports.comports() if 'Arduino Uno' not in port.description]
-    all_ports = arduino_ports + other_ports
+    #commented out to force only try connect on Arduino ports. This will save time and prevent interfering with the printer connection.
+    #other_ports = [port.device for port in serial.tools.list_ports.comports() if 'Arduino Uno' not in port.description]
+    #all_ports = arduino_ports + other_ports
+    
+    # if no arduino ports are found then return with appropriate message
+    if not arduino_ports:
+        return None, "No Swapper3D found. Are you sure the USB is plugged between the Swapper3D and Octoprint?"
 
-    for port in all_ports:
+    for port in arduino_ports:
         try:
-            plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Trying to connect to {port}..."))
+            plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Trying to connect to port {port}..."))
             ser = serial.Serial(port, 9600, timeout=2)
             time.sleep(2)
 
