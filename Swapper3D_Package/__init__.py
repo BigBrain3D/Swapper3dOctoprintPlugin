@@ -162,7 +162,7 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
 
 
 __plugin_name__ = "Swapper3D"
-__plugin_version__ = __version__ #"0.1.43"
+__plugin_version__ = __version__ 
 __plugin_description__ = "An Octoprint plugin for Controlling the Swapper3D"
 __plugin_author__ = "BigBrain3D"
 __plugin_url__ = "https://github.com/BigBrain3D/Swapper3dOctoprintPlugin"

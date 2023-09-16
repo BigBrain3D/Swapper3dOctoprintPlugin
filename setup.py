@@ -6,7 +6,7 @@ from Swapper3D_Package.version import __version__
 plugin_identifier = "Swapper3D"
 plugin_package = "Swapper3D_Package"
 plugin_name = "Swapper3D"
-plugin_version = __version__ #"0.1.43"
+plugin_version = __version__
 plugin_description = "Connect to Swapper3D and coordinate swaps with the 3D printer"
 plugin_author = "BigBrain3D"
 plugin_author_email = "info@bigbrain3D.com"
