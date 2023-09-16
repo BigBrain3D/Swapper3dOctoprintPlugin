@@ -8,7 +8,6 @@ from .commands import handle_command
 from .gcode_injector import inject_gcode
 from .default_settings import get_default_settings
 from .Swap_utils import bore_align_on, bore_align_off
-from .version import __version__
 
 class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                       octoprint.plugin.TemplatePlugin,
@@ -162,7 +161,7 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
 
 
 __plugin_name__ = "Swapper3D"
-__plugin_version__ = __version__ 
+__plugin_version__ = "0.2.4" 
 __plugin_description__ = "An Octoprint plugin for Controlling the Swapper3D"
 __plugin_author__ = "BigBrain3D"
 __plugin_url__ = "https://github.com/BigBrain3D/Swapper3dOctoprintPlugin"
