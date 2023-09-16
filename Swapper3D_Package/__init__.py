@@ -155,13 +155,14 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                 user="BigBrain3D",
                 repo="Swapper3dOctoprintPlugin",
                 current=self._plugin_version,
-                pip="https://github.com/BigBrain3D/Swapper3dOctoprintPlugin/archive/{target_version}.zip"
+                pip="https://github.com/BigBrain3D/Swapper3D_Octoprint_Plugin/archive/{target_version}.zip",
+                pip_args=["--no-cache-dir", "--ignore-installed", "--force-reinstall"]
             )
         )
 
 
 __plugin_name__ = "Swapper3D"
-__plugin_version__ = "0.2.4" 
+__plugin_version__ = "0.2.9" 
 __plugin_description__ = "An Octoprint plugin for Controlling the Swapper3D"
 __plugin_author__ = "BigBrain3D"
 __plugin_url__ = "https://github.com/BigBrain3D/Swapper3dOctoprintPlugin"
