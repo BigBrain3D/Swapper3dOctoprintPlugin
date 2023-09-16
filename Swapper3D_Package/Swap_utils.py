@@ -25,8 +25,12 @@ def PreparePrinterForSwap(plugin, currentZofPrinter, HomeAxis, EchoCommand):
     # Move to the specific X and Y coordinates
     gcode_commands.append(f"G1 X{x_pos} Y{y_pos}")  
 
+
+    # Send message with currentZofPrinter and min_z_height values
+    send_plugin_message(plugin, f"currentZofPrinter: {currentZofPrinter}, min_z_height: {min_z_height}")
+    
     # Check if the Z movement is necessary
-    if currentZofPrinter < min_z_height:
+    if int(currentZofPrinter) < int(min_z_height):
         gcode_commands.append(f"G1 Z{str(min_z_height)}")  # Raise Z to the min Z height if needed
         
     # Add the remaining commands
@@ -41,8 +45,8 @@ def PreparePrinterForSwap(plugin, currentZofPrinter, HomeAxis, EchoCommand):
     plugin._printer.commands(gcode_commands)
     
     #pause all gcode commands
-    #resumes in the on_gcode_received method init py
-    self._printer.commands("@pause")
+    #resumes in the on_gcode_received method init py or the borealignoff
+    plugin._printer.commands("@pause")
     
 
 # Function to turn on bore alignment
@@ -54,6 +58,7 @@ def bore_align_on(plugin):
 # Function to turn off bore alignment
 def bore_align_off(plugin):
     command = "borealignoff"
+    plugin._printer.commands("@resume")
     send_plugin_message(plugin, f"Sending command to turn off bore alignment")
     return perform_command(plugin, command)
     

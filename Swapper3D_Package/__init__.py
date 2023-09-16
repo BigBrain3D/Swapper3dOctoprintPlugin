@@ -125,9 +125,7 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                 return line
                 
         return line
-
-
-
+        
             
     def get_template_configs(self):
         return [
@@ -149,16 +147,6 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
         self._logger.debug(f"Default settings: {default_settings}")
         return default_settings
 
-
-    #def serial_loop(self):
-    #    while True:
-    #        if self.serial_conn is None:
-    #            break
-    #
-    #        if self.serial_conn.in_waiting:
-    #            line = self.serial_conn.readline().decode()
-    #            self._logger.info("Received from Arduino: " + line)
-
     def get_update_information(self):
         return dict(
             Swapper3D=dict(
@@ -166,17 +154,17 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                 displayVersion=self._plugin_version,
                 type="github_release",
                 user="BigBrain3D",
-                repo="Swapper3D_Octoprint_Plugin_V1",
+                repo="Swapper3dOctoprintPlugin",
                 current=self._plugin_version,
-                pip="https://github.com/BigBrain3D/Swapper3D_Octoprint_Plugin/archive/{target_version}.zip"
+                pip="https://github.com/BigBrain3D/Swapper3dOctoprintPlugin/archive/{target_version}.zip"
             )
         )
 
 __plugin_name__ = "Swapper3D"
-__plugin_version__ = "0.1.0"
-__plugin_description__ = "A plugin controlling the Swapper3D"
+__plugin_version__ = "0.1.43"
+__plugin_description__ = "An Octoprint plugin for Controlling the Swapper3D"
 __plugin_author__ = "BigBrain3D"
-__plugin_url__ = "https://github.com/BigBrain3D/Swapper3D"
+__plugin_url__ = "https://github.com/BigBrain3D/Swapper3dOctoprintPlugin"
 __plugin_license__ = "AGPLv3"
 __plugin_pythoncompat__ = ">=3.7,<4"  # Compatible python versions
 __plugin_implementation__ = Swapper3DPlugin()
