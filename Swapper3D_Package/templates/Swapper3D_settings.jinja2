@@ -33,19 +33,75 @@
         <input type="number" id="zHeight" title="MMU:82, Palette:95" data-bind="value: settings.plugins.Swapper3D.zHeight" placeholder="MMU:82, Palette:95">
     </div>
     
+    <h4>General</h4>
+	<div class="flex-layout">
+        <label for="Stock extruder Max feedrate(M203 mm/s)">Stock extruder Max feedrate(M203 mm/s):</label>
+        <input type="number" id="StockExtruderMaxFeedrate" title="Default: 120.0" data-bind="value: settings.plugins.Swapper3D.StockExtruderMaxFeedrate" placeholder="Default: 120.0">
+    </div>
+	
+	<div class="flex-layout">
+        <label for="Swap extruder Max feedrate(M203 mm/s)">Swap extruder Max feedrate(M203 mm/s):</label>
+        <input type="number" id="SwapExtruderMaxFeedrate" title="Default: 500.0" data-bind="value: settings.plugins.Swapper3D.SwapExtruderMaxFeedrate" placeholder="Default: 500.0">
+    </div>
+    
+	<div class="flex-layout">
+        <label for="Stock extruder Max acceleration - normal(M201 mm/s2)">Stock extruder Max acceleration - normal(M201 mm/s2):</label>
+        <input type="number" id="StockExtruderMaxAcceleration" title="Default: 5000" data-bind="value: settings.plugins.Swapper3D.StockExtruderMaxAcceleration" placeholder="Default: 5000">
+    </div>
+	
+	<div class="flex-layout">
+        <label for="Swap extruder Max acceleration - normal(M201 mm/s2)">Swap extruder Max acceleration - normal(M201 mm/s2):</label>
+        <input type="number" id="SwapExtruderMaxAcceleration" title="Default: 25000" data-bind="value: settings.plugins.Swapper3D.SwapExtruderMaxAcceleration" placeholder="Default: 25000">
+    </div>
+	
     <div class="flex-layout">
         <label for="zMotorCurrent">Z Motor Current(ma):</label>
         <input type="number" id="zMotorCurrent" title="Default: 900" data-bind="value: settings.plugins.Swapper3D.zMotorCurrent" placeholder="Default: 900">
     </div>
     
     <div class="flex-layout">
-        <label for="extrudeSpeedPulldown">Extrude speed for pulldown:</label>
-        <input type="number" id="extrudeSpeedPulldown" title="Default: 20" data-bind="value: settings.plugins.Swapper3D.extrudeSpeedPulldown" placeholder="Default: 20">
+        <label for="extrudeSpeedPulldown">Extrude speed(mm/min) for pulldown:</label>
+        <input type="number" id="extrudeSpeedPulldown" title="Default: 12000" data-bind="value: settings.plugins.Swapper3D.extrudeSpeedPulldown" placeholder="Default: 12000">
+    </div>    
+	
+    <div class="flex-layout">
+        <label for="extrudeLengthLockingHeight">Extrude length for locking height:</label>
+        <input type="number" id="extrudeLengthLockingHeight" title="Default: 18.2" data-bind="value: settings.plugins.Swapper3D.extrudeLengthLockingHeight" placeholder="Default: 18.2">
     </div>
 
     <div class="flex-layout">
-        <label for="extrudeSpeedPalette">Extrude speed for palette cuts:</label>
-        <input type="number" id="extrudeSpeedPalette" title="Default: 100" data-bind="value: settings.plugins.Swapper3D.extrudeSpeedPalette" placeholder="Default: 100">
+        <label for="extrudeLengthCuttingHeight">Extrude length for cutting height:</label>
+        <input type="number" id="extrudeLengthCuttingHeight" title="Default: 39.8" data-bind="value: settings.plugins.Swapper3D.extrudeLengthCuttingHeight" placeholder="Default: 39.8">
+    </div>
+
+    <div class="flex-layout">
+        <label for="retractLengthAfterCut">Retract length after cut (mm):</label>
+        <input type="number" id="retractLengthAfterCut" title="Default: -70" data-bind="value: settings.plugins.Swapper3D.retractLengthAfterCut" placeholder="Default: -70.0">
+    </div>
+
+    <div class="flex-layout">
+        <label for="msDelayAfterExtrude">ms of delay after sending the extrude command to printer:</label>
+        <input type="number" id="msDelayAfterExtrude" title="Default: 115" data-bind="value: settings.plugins.Swapper3D.msDelayAfterExtrude" placeholder="Default: 115">
+    </div>
+
+    <div class="flex-layout">
+        <label for="msDelayPerDegreeMovedDuringSwapPulldown">ms of delay per degree moved during pulldowns:</label>
+        <input type="number" id="msDelayPerDegreeMovedDuringSwapPulldown" title="Default: 6" data-bind="value: settings.plugins.Swapper3D.msDelayPerDegreeMovedDuringSwapPulldown" placeholder="Default: 6">
+    </div>
+
+    <div class="flex-layout">
+        <label for="NozzleWipe">Nozzle wipe procedure (on/off):</label>
+        <label class="switch">
+            <input type="checkbox" id="NozzleWipe" title="Default: On" data-bind="checked: settings.plugins.Swapper3D.NozzleWipe">
+            <span class="slider round"></span>
+        </label>
+    </div>
+	
+	
+    <h4>Palette</h4>
+    <div class="flex-layout">
+        <label for="extrudeSpeedPaletteCuts">Extrude speed for palette cuts (mm/min):</label>
+        <input type="number" id="extrudeSpeedPaletteCuts" title="Default: 18000" data-bind="value: settings.plugins.Swapper3D.extrudeSpeedPaletteCuts" placeholder="Default: 18000">
     </div>
 	
     <div class="flex-layout">
@@ -54,8 +110,13 @@
     </div>
 
     <div class="flex-layout">
-        <label for="lengthAdditionalCut">Length of each additional cut:</label>
+        <label for="lengthAdditionalCut">Length of each additional cut (mm):</label>
         <input type="number" id="lengthAdditionalCut" title="Default: 15" data-bind="value: settings.plugins.Swapper3D.lengthAdditionalCut" placeholder="Default: 15">
+    </div>
+
+    <div class="flex-layout">
+        <label for="delayAfterCut">Delay after each cut (ms):</label>
+        <input type="number" id="delayAfterCut" title="Default: 100" data-bind="value: settings.plugins.Swapper3D.delayAfterCut" placeholder="Default: 100">
     </div>
 
     <div class="flex-layout">

@@ -38,6 +38,11 @@ function Swapper3DViewModel(parameters) {
         self.sendCommandToSwapper3D("disconnect");
     };
 
+    self.retrieveFirmwareVersion = function() {
+        self.logToSwapper3D("retrieveFirmwareVersion Swapper3D button was clicked");
+        self.sendCommandToSwapper3D("retrieveFirmwareVersion");
+    };
+
     self.unloadInsert = function(event) {
         event.preventDefault();
         self.logToSwapper3D("Unload Insert button was clicked");
@@ -87,7 +92,8 @@ function Swapper3DViewModel(parameters) {
                 self.logToSwapper3D(command.charAt(0).toUpperCase() + command.slice(1) + " command successful");
             },
             error: function(jqXHR) {
-                self.logToSwapper3D(command.charAt(0).toUpperCase() + command.slice(1) + " command failed: " + jqXHR.responseText);
+				//this error message is too detailed for end users, it implies that there is a bug in plugin. Use english messages at the point of failure, for instance in the commands.py "Load insert not successful: The current insert must be unloaded first."
+                //self.logToSwapper3D(command.charAt(0).toUpperCase() + command.slice(1) + " command failed: " + jqXHR.responseText);
             }
         });
     };
@@ -95,6 +101,7 @@ function Swapper3DViewModel(parameters) {
     self.onStartupComplete = function() {
         $('#connectSwapper3D').click(self.connectSwapper3D);
         $('#disconnectSwapper3D').click(self.disconnectSwapper3D);
+        $('#retrieveFirmwareVersion').click(self.retrieveFirmwareVersion);
         $('#unloadInsertButton').click(self.unloadInsert);
         $('#swapToInsertButton').click(self.swapToInsert);
         $('#boreAlignmentOnButton').click(self.boreAlignmentOn);

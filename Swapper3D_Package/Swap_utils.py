@@ -11,6 +11,18 @@ from .Swapper3D_utils import perform_command, send_plugin_message
 #   M118 if sent to the printer, the printer will wait for all movements to finish because of the G4 
 #   and then the M118 will simply echo back the line in quotes 
 #   octoprint will then monitor the incoming statements and look for 
+# the reason that we need to do it this way is there is no command to ask the printer if all it's movements are complete
+# that means that we would send the command to the printer to move to the XYZ swap position but we could never know when it's finished moving to that position
+# instead we issue a command to move followed by a G4 followed by the M118 command to echo. 
+# this is what happens: 
+# 1) the printer queues all the commands
+# 2) the printer tries to execute all the commands at the same time
+# 3) but it runs into a G4 which tells it to finish all the movement commands before executing any new commands
+# 4) the printer finishes all the movement commands which satisfies the G4 command
+# 5) the printer executes the M118 echo command
+# 6) Octoprint , which has been monitoring all outgoing printer communications, receives the echo "some octoprint command (ready for swap, or ready for bore alignment, for example)
+# 7) octoprint now knows that the print head is in the swap position
+# 8) octoprint executes the requested command
 def PreparePrinterForSwap(plugin, currentZofPrinter, HomeAxis, EchoCommand):
     # Get the min_z_height from the settings
     min_z_height = plugin._settings.get(["zHeight"])
@@ -67,17 +79,20 @@ def swap(plugin):
     #if the current_extruder is not None then unload first
     if plugin.current_extruder != None:
         plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="There is a currently loaded insert. Attempting to unload Insert."))
-        try:
-            unload_result = unload_insert(plugin)
-            if unload_result != "OK":
-                plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Unload failed: {unload_result}"))
-                return jsonify(result="False", error=unload_result), 500
-        except Exception as e:
-            plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Exception during unload: {str(e)}"))
-            return jsonify(result="False", error=str(e)), 500
+        
+        #if there is an insert loaded already then unload it first
+        if self.insertLoaded:
+            try:
+                unload_result = unload_insert(plugin)
+                if unload_result != "OK":
+                    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Unload failed: {unload_result}"))
+                    return jsonify(result="False", error=unload_result), 500
+            except Exception as e:
+                plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Exception during unload: {str(e)}"))
+                return jsonify(result="False", error=str(e)), 500
 
-        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Unload successful"))
-        return jsonify(result="True")
+            plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Unload successful"))
+            return jsonify(result="True")
 
     #load the next insert
     try:

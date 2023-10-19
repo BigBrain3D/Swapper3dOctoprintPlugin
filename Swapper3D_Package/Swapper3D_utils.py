@@ -67,17 +67,17 @@ def read_and_check_response(plugin):
         send_plugin_message(plugin, "Received empty response")
         return None, None
 
-
-
-
 # Abstract the common operations of swap_to_insert and unload_insert into one function
-def perform_command(plugin, command):
+def perform_command(plugin, command, WaitForOk=True):
     write_message_with_parity(plugin, command)
     time.sleep(1)
 
     send_plugin_message(plugin, f"Sending command {command} to Swapper3D")
 
-    # Keep reading responses until an OK is received
+    if not WaitForOk:
+        return True, None
+
+    # Keep reading responses until an 'ok' is received
     while True:
     
         check_response, response = read_and_check_response(plugin)
@@ -93,9 +93,17 @@ def perform_command(plugin, command):
             send_plugin_message(plugin, f"Command '{command}' failed.")
             return False, "Parity check did not pass."
 
-
+def retrieveFirmwareVersion(plugin):
+    command = "RetrieveCurrentFirmwareVersion"
+    send_plugin_message(plugin, "Sending command to RetrieveCurrentFirmwareVersion")
+    return perform_command(plugin, command)
 
 def load_insert(plugin, insert_number):
+    # Check the printer is connected
+    if not plugin._printer.is_operational():
+        send_plugin_message(plugin, "Printer must be connected to Swap!")
+        return "Printer not connected" 
+
     command = f"load_insert{insert_number}"
     send_plugin_message(plugin, f"Sending command to load_insert insert {insert_number}")
     return perform_command(plugin, command)
@@ -114,71 +122,117 @@ def unload_insert(plugin):
         # send_plugin_message(plugin, "Hotend temperature is less than 200C")
         # return "Hotend too cold to Swap!" 
     
-    # Get the setting
+    # Get the settings
     filamentSwitcherType = plugin._settings.get(["filamentSwitcherType"])
+    extrudeSpeedPulldown = plugin._settings.get(["extrudeSpeedPulldown"])
+    extrudeLengthLockingHeight = plugin._settings.get(["extrudeLengthLockingHeight"])
+    extrudeLengthCuttingHeight = plugin._settings.get(["extrudeLengthCuttingHeight"])
+    StockExtruderMaxFeedrate = plugin._settings.get(["StockExtruderMaxFeedrate"])
+    SwapExtruderMaxFeedrate = plugin._settings.get(["SwapExtruderMaxFeedrate"])
+    StockExtruderMaxAcceleration = plugin._settings.get(["StockExtruderMaxAcceleration"])
+    SwapExtruderMaxAcceleration = plugin._settings.get(["SwapExtruderMaxAcceleration"])
+    msDelayAfterExtrude = plugin._settings.get(["msDelayAfterExtrude"])
+    msDelayPerDegreeMovedDuringSwapPulldown = plugin._settings.get(["msDelayPerDegreeMovedDuringSwapPulldown"])
+    retractLengthAfterCut = plugin._settings.get(["retractLengthAfterCut"])
 
-    if filamentSwitcherType != "Palette":
-        send_plugin_message(plugin, "Executing Parallel unload")
+    #palette settings
+    extrudeSpeedPaletteCuts = plugin._settings.get(["extrudeSpeedPaletteCuts"])
+    numPaletteCuts = plugin._settings.get(["numPaletteCuts"])
+    lengthAdditionalCut = plugin._settings.get(["lengthAdditionalCut"])
+    delayAfterCut = int(plugin._settings.get(["delayAfterCut"]))
+    
         
-        perform_command(plugin, "unload_connect")
-        
-        perform_command(plugin, "unload_pulldown_lockingheight")
+    # Check if msDelayAfterExtrude is not None
+    if msDelayAfterExtrude is not None:
+        # Convert msDelayAfterExtrude to float
+        delayAfterExtrude = float(msDelayAfterExtrude)
 
-        #locking height
-        # Extrude filament at the same time as the pulldown 
-		#was F3960
-        gcode_commands = ["G92 E0 ;reset extrusion distance"
-                         ,"G1 E5.000 F5000.0"] 
-        plugin._printer.commands(gcode_commands)
-        
-        time.sleep(1)
-
-        #cutting height
-        perform_command(plugin, "unload_pulldown_cuttingheight")
-        gcode_commands = ["G92 E0 ;reset extrusion distance"
-                         ,"G1 E55.000 F5000.0"] 
-        plugin._printer.commands(gcode_commands)
-        
-        
-       # perform_command(plugin, "unload_deploycutter")
-       # perform_command(plugin, "unload_cut")
-       # perform_command(plugin, "unload_stowInsert")
-        
-        # retract filament
-        # Send the G-code commands to prepare for swap
-        # gcode_commands = ["G92 E0 ;reset extrusion distance"
-                         # ,"G1 E-70.000 F3960.0"]
-        
-        # plugin._printer.commands(gcode_commands)
-        # perform_command(plugin, "unload_stowCutter")
-        
+        # Send a message to the plugin with the delay time
+        send_plugin_message(plugin, f"Delaying for {msDelayAfterExtrude} milliseconds before extruding...")
     else:
-        send_plugin_message(plugin, "Executing Serial unload")
-        
-        perform_command(plugin, "unload_connect")
-        perform_command(plugin, "unload_pulldown")
-        
-        # The printer is told to extrude here. You need to implement this functionality.
-        # Extrude filament at the same time as the pulldown
-        gcode_commands = ["G92 E0 ;reset extrusion distance"
-                         ,"G1 E55.000 F3960.0"]
-        plugin._printer.commands(gcode_commands)
+        send_plugin_message(plugin, "msDelayAfterExtrude setting is not defined.") 
+        return
         
         
-        perform_command(plugin, "unload_deploycutter_guide") #palette only
-        perform_command(plugin, "unload_deploycutter")
-        perform_command(plugin, "unload_cut")
-        perform_command(plugin, "unload_stowInsert")
-        #extrude then cut    #palette only
+    #begin unload sequence
+    send_plugin_message(plugin, "Executing unload")
+            
+    gcode_commands = ["M302 P0 ;allow cold extrusion",
+                      f"M203 E{SwapExtruderMaxFeedrate}",
+                      f"M201 E{SwapExtruderMaxAcceleration}"] 
+    plugin._printer.commands(gcode_commands)
+            
+    perform_command(plugin, "unload_connect")
+    
+    #pulldown to locking height
+    # Extrude filament at the same time as the pulldown 
+    #all these commands are sent to the printer at the same time
+    #octoprint moves on but the printer tries to execute the commands
+    #the first command is a delay/sleep/pause, which allow the Swapper3D to get a head start on the pulldown
+    gcode_commands = [f"G4 P{delayAfterExtrude}",
+                      "G92 E0 ;reset extrusion distance",
+                      f"G1 E{extrudeLengthLockingHeight} F{extrudeSpeedPulldown}"] 
+    plugin._printer.commands(gcode_commands)
+   
+    send_plugin_message(plugin, f"msDelayPerDegreeMovedDuringSwapPulldown: {msDelayPerDegreeMovedDuringSwapPulldown}")
+    perform_command(plugin, f"unload_pulldown_lockingheight{msDelayPerDegreeMovedDuringSwapPulldown}")
+    
+    #pulldown to cutting height
+    # Extrude filament at the same time as the pulldown 
+    gcode_commands = [f"G4 P{delayAfterExtrude}",
+                      "G92 E0 ;reset extrusion distance",
+                      f"G1 E{extrudeLengthCuttingHeight} F{extrudeSpeedPulldown}"] 
+    plugin._printer.commands(gcode_commands)
+   
+    send_plugin_message(plugin, f"msDelayPerDegreeMovedDuringSwapPulldown: {msDelayPerDegreeMovedDuringSwapPulldown}")
+    perform_command(plugin, f"unload_pulldown_cuttingheight{msDelayPerDegreeMovedDuringSwapPulldown}")
+    
+    #deploy the cutter
+    #cut once
+    #stow the insert
+    perform_command(plugin, "unload_deploycutter")
+
+    #whether it's palette or mmu it always needs to cut and stow the insert
+    perform_command(plugin, "unload_cut")
         
-        #retract filament
-        # Send the G-code commands to prepare for swap
-        gcode_commands = ["G92 E0 ;reset extrusion distance"
-                         ,"G1 E-70.000 F3960.0"]
+    #palette multi cuts
+    if filamentSwitcherType == "Palette":
+        #move the tool arm out of the way a little so it's very quick
+        perform_command(plugin, "unload_AvoidBin")
         
-        plugin._printer.commands(gcode_commands)
-        perform_command(plugin, "unload_stowCutter")
+        intNumPaletteCuts  = int(numPaletteCuts)
+        
+        # start palette cut loop
+        for _ in range(intNumPaletteCuts):
+            # extrude
+            gcode_commands = ["G92 E0 ;reset extrusion distance", 
+                             f"G1 E{lengthAdditionalCut} F{extrudeSpeedPaletteCuts}"]
+            plugin._printer.commands(gcode_commands)
+
+            time.sleep(delayAfterCut/1000)
+
+            # cut
+            perform_command(plugin, "unload_cut")
+        # end palette cut loop
+        
+        
+    #retract filament
+    #Send the G-code commands to prepare for swap
+    gcode_commands = ["G92 E0 ;reset extrusion distance"
+                     ,f"G1 E{retractLengthAfterCut} F{extrudeSpeedPulldown}"]
+    plugin._printer.commands(gcode_commands)
+    
+    perform_command(plugin, "unload_stowInsert", True)
+    perform_command(plugin, "unload_stowCutter")
+
+    if filamentSwitcherType == "Palette":
         perform_command(plugin, "unload_dumpWaste")  # Palette only.
+
+    
+    #set the feedrate and accel back to Stock
+    gcode_commands = [f"M203 E{StockExtruderMaxFeedrate}",
+                      f"M201 E{StockExtruderMaxAcceleration}"] 
+    plugin._printer.commands(gcode_commands)
 
     return "OK"  # Return OK if all commands were successfully executed.
 

@@ -27,6 +27,7 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
         self.is_print_started = False #custom flag to track if we already injected the start print commands needed for the swapper
         self.current_extruder = None  # Initialize current_extruder as None
         self.next_extruder = None  # Initialize next_extruder as None
+        self.insertLoaded = False
 
     def on_event(self, event, payload):
         if event == "PrintStarted":
@@ -38,50 +39,78 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
     def on_after_startup(self):
         self._logger.info("Swapper3D plugin has started!")
 
+    #this is gcode placed into the queue BEFORE sending to the printer
+    #perhaps should be "return cmd," ??
     def hook_gcode_queuing(self, comm_instance, phase, cmd, cmd_type, gcode, subcode=None, tags=None, *args, **kwargs):
-        #return if the printer is not connected
-        #return if there is no print running
-        if not self._printer.is_operational() or not self._printer.is_printing():
-            return (cmd, cmd_type, gcode, subcode, tags)
-        
-        #is the Swapper3D is disconnected then don't do any swap prep or swaps
-        if self.serial_conn is None:
-            return (cmd, cmd_type, gcode, subcode, tags)
+        try:
+            # Log a message to indicate that this function was called
+            self._logger.info("hook_gcode_queuing called")
 
-        #return if gcode is empty
-        if not gcode:
-            return (cmd, cmd_type, gcode, subcode, tags)
+            # Check if the printer is operational and not currently printing
+            if comm_instance.isOperational() and not comm_instance.isPrinting():
+                # Log a message to indicate that the printer is ready but not currently printing
+                self._logger.info("Printer is operational but not printing")
+
+                # If the serial connection is not available, log the corresponding message and return
+                if self.serial_conn is None:
+                    self._logger.info("Swapper3D is disconnected")
+                    return
+
+                # If the command is a tool change command (starts with "T")
+                if gcode and gcode.startswith("T"):
+                    # Log a message indicating the processing of the tool change command
+                    self._logger.info("Processing tool change command")
+
+                    # Update the next extruder based on the command
+                    self.next_extruder = cmd[1:]
+
+                    # If the print has not started yet,
+                    if not self.is_print_started:
+                        # Get the motor current setting 
+                        z_motor_current = self._settings.get(["zMotorCurrent"])
+
+                        # Log the setting value
+                        self._logger.info(f"Setting motor current to {z_motor_current}")
+
+                        # Set the motor current on the printer
+                        self._printer.commands(f"M906 {z_motor_current}")
+                        self._printer.commands(gcode_commands)
+
+                        # Indicate that the print has started
+                        self.is_print_started = True
+                        return
+
+                    # If the current and next extruders are the same, log the corresponding message and return
+                    if self.current_extruder == self.next_extruder:
+                        self._logger.info("Current and next Tools are the same. Skipping swap.")
+                        return
+
+                    # Indicate that the printer does not need to rehome its axis
+                    HomeAxis = False
+
+                    # Get the current Z position of the printer
+                    current_z = self._printer.get_current_data()["currentZ"]
+
+                    # Send the current Z position to the plugin manager
+                    self._plugin_manager.send_plugin_message(self._identifier, dict(type="current_z", message=str(current_z)))
+
+                    # Prepare the printer for the swap
+                    PreparePrinterForSwap(self, current_z, HomeAxis, "readyforswap")
+
+                    # Send the currently loaded insert to the plugin manager
+                    self._plugin_manager.send_plugin_message(self._identifier, dict(type="currentlyLoadedInsert", message=str(insert_number)))
+
+        except Exception as e:
+            # If an error occurs, log the error message
+            self._logger.error(f"An error occurred in hook_gcode_queuing: {str(e)}")
             
-        #return if the gcode is not a Tool change
-        # If the command is a 'T' command, we need to update the current_extruder and next_extruder
-        if not gcode.startswith("T"):
-            return (cmd, cmd_type, gcode, subcode, tags)
-        
-        self.next_extruder = cmd[1:]  # Capture everything after T as the current extruder (e.g., for T1, current_extruder will be '1')
+            # Also log the stack trace of the error
+            self._logger.error(traceback.format_exc())
 
-        # Check if it's the start of the print
-        if not self.is_print_started:
-            z_motor_current = self._settings.get(["zMotorCurrent"])
-            self._printer.commands(f"M906 {z_motor_current}")  # insert the command
-            self.is_print_started = True  # Update the flag after the start of the print
-            return (cmd, cmd_type, gcode, subcode, tags)
-
-
-        #return if the next Tool is the same as the current Tool
-        #if the current and next T command are the same exit without Swapping
-        #also return an empty GCODE so that the filament switcher doesn't waste time removing and adding the exact same filament
-        #will this mess with the palette or P2PP because they may have extra length to account for that extra tool change???????
-        if self.current_extruder == self.next_extruder:
-            return
-            
-        HomeAxis = False  # Assuming you want to Home Axis when borealignon command is received
-        current_z = self._printer.get_current_data()["currentZ"]   # Get the current Z height
-        self._plugin_manager.send_plugin_message(self._identifier, dict(type="current_z", message=str(current_z)))
-        PreparePrinterForSwap(self, current_z, HomeAxis, "readyforswap")#suspend all gcode queueing until the swap is complete in on_gcode_received
-        self._plugin_manager.send_plugin_message(self._identifier, dict(type="currentlyLoadedInsert", message=str(insert_number)))
+        # Returns the command unmodified
         return
 
-
+    #this is gcode FROM THE PRINTER
     def on_gcode_received(self, comm, line, *args, **kwargs):
         # Check if the line contains our echo (case insensitive)
         if "readyforborealignment" in line.lower():
@@ -100,9 +129,8 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                 return line
 
         if "readyforswap" in line.lower():
-            # Finally, turn on bore alignment
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="command echo from printer: readyforswap"))
-            try:
+            try:                    
                 success, error = swap(self)
                 
                 #insert the tool command here so that the filament is switched
@@ -162,7 +190,7 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
 
 
 __plugin_name__ = "Swapper3D"
-__plugin_version__ = "0.2.9" 
+__plugin_version__ = "0.3.0" 
 __plugin_description__ = "An Octoprint plugin for Controlling the Swapper3D"
 __plugin_author__ = "BigBrain3D"
 __plugin_url__ = "https://github.com/BigBrain3D/Swapper3dOctoprintPlugin"

@@ -62,8 +62,27 @@ def handle_command(self):
 
         return jsonify(result="True")
 
+    elif command == "retrieveFirmwareVersion":
+        if self.serial_conn is not None:
+            try:
+                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Retrieving Firmware Version."))
+                retrieveFirmwareVersion(self)
+            except Exception as e:
+                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Failed to retrieveFirmwareVersion: {str(e)}"))
+                return jsonify(result="False", error=str(e)), 500
+        else:
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Must be connected to Swapper3D to retrieve the firmware version."))
+            return jsonify(result="False", error="Must be connected to Swapper3D to retrieve the firmware version."), 500
+
+        return jsonify(result="True")
+
 
     elif command == "load_insert":
+        if self.insertLoaded:
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Insert is already loaded; Must unload first."))
+            return
+    
+
         insert_number = data.get("insert_number")
 
         # Debug log: Print the raw 'insert_number' value received
@@ -84,26 +103,37 @@ def handle_command(self):
 
         try:
             success, error = load_insert(self, insert_number)
+            
             if not success:
                 self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Failed to swap to insert: {error}"))
                 return jsonify(result="False", error=str(error)), 500
+
+            self.insertLoaded = True
+
         except Exception as e:
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Failed to swap to insert: {str(e)}"))
             return jsonify(result="False", error=str(e)), 500
 
 
         self._plugin_manager.send_plugin_message(self._identifier, dict(type="currentlyLoadedInsert", message=str(insert_number)))
-
         self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Swapped to insert: {insert_number}"))
+
         return jsonify(result=str(success))
         
     elif command == "unload":
+        if not self.insertLoaded:
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Insert is not already loaded; Must load first."))
+            return
+        
+    
         self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Received command: " + command))
         try:
             unload_result = unload_insert(self)
             if unload_result != "OK":
                 self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Unload failed: {unload_result}"))
                 return jsonify(result="False", error=unload_result), 500
+            
+            self.insertLoaded = False
         except Exception as e:
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Exception during unload: {str(e)}"))
             return jsonify(result="False", error=str(e)), 500
