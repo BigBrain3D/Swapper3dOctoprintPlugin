@@ -2,7 +2,7 @@
 def get_default_settings():
     return dict(
         xPos = "250",
-        yPos = "210",
+        yPos = "0.5",
         zHeight = "95",
         StockExtruderMaxFeedrate = "120.0",
         SwapExtruderMaxFeedrate = "500.0",
@@ -10,6 +10,7 @@ def get_default_settings():
         SwapExtruderMaxAcceleration = "15000",
         zMotorCurrent = "900",
         extrudeSpeedPulldown = "12000",
+        retractSpeed= "10000",
         extrudeLengthLockingHeight="18.2",
         extrudeLengthCuttingHeight="39.8",
         retractLengthAfterCut="-70.0",

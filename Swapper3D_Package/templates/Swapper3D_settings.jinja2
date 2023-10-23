@@ -20,12 +20,12 @@
     <h4>Print head Swap location</h4>
     <div class="flex-layout">
         <label for="xPos">X axis position:</label>
-        <input type="number" id="xPos" title="Should be approx 251" data-bind="value: settings.plugins.Swapper3D.xPos" placeholder="Default: 251">
+        <input type="number" id="xPos" title="Should be approx 250" data-bind="value: settings.plugins.Swapper3D.xPos" placeholder="Default: 250">
     </div>
     
     <div class="flex-layout">
         <label for="yPos">Y axis position:</label>
-        <input type="number" id="yPos" title="Default: 175" data-bind="value: settings.plugins.Swapper3D.yPos" placeholder="Default: 175">
+        <input type="number" id="yPos" title="Default: 0.5" data-bind="value: settings.plugins.Swapper3D.yPos" placeholder="Default: 0.5">
     </div>
     
     <div class="flex-layout">
@@ -63,6 +63,11 @@
         <label for="extrudeSpeedPulldown">Extrude speed(mm/min) for pulldown:</label>
         <input type="number" id="extrudeSpeedPulldown" title="Default: 12000" data-bind="value: settings.plugins.Swapper3D.extrudeSpeedPulldown" placeholder="Default: 12000">
     </div>    
+    
+    <div class="flex-layout">
+        <label for="retractSpeed">Extrude speed(mm/min) for pulldown:</label>
+        <input type="number" id="retractSpeed" title="Default: 12000" data-bind="value: settings.plugins.Swapper3D.retractSpeed" placeholder="Default: 12000">
+    </div>   
 	
     <div class="flex-layout">
         <label for="extrudeLengthLockingHeight">Extrude length for locking height:</label>

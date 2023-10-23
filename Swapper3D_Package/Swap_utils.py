@@ -1,6 +1,6 @@
 # Octoprint plugin name: Swapper3D, File: Swap_utils.py, Author: BigBrain3D, License: AGPLv3 
 
-from .Swapper3D_utils import perform_command, send_plugin_message
+from .Swapper3D_utils import perform_command, send_plugin_message, load_insert, unload_insert
 
 
 # def SendStartGcodeToPrinter(plugin):
@@ -34,21 +34,23 @@ def PreparePrinterForSwap(plugin, currentZofPrinter, HomeAxis, EchoCommand):
     if HomeAxis:
         gcode_commands.append("G28 XYZ")  # Home all axis if HomeAxis is set to True
    
-    # Move to the specific X and Y coordinates
-    gcode_commands.append(f"G1 X{x_pos} Y{y_pos}")  
-
-
     # Send message with currentZofPrinter and min_z_height values
-    send_plugin_message(plugin, f"currentZofPrinter: {currentZofPrinter}, min_z_height: {min_z_height}")
+    send_plugin_message(plugin, f"Swapper3D_utils.PreparePrinterForSwap.currentZofPrinter: {currentZofPrinter}, min_z_height: {min_z_height}")
     
     # Check if the Z movement is necessary
     if int(currentZofPrinter) < int(min_z_height):
         gcode_commands.append(f"G1 Z{str(min_z_height)}")  # Raise Z to the min Z height if needed
         
+    # Move to the specific X and Y coordinates
+    gcode_commands.append(f"G1 X{x_pos} Y{y_pos} F6000")  
+
+
+        
     # Add the remaining commands
     gcode_commands.extend([
         "G4",  # The G4 command will wait until the previous movement commands are complete before it allows any more commands to be queued
-        f'M118 E1 "{EchoCommand}"'   # Echo command updated
+        # f'M118 E1 "{EchoCommand}"'   # Echo command updated
+        f'M117 E1 "{EchoCommand}"'   # Echo command updated works with virtual printer
     ])
 
     send_plugin_message(plugin, f"Sending commands to printer to Prepare Printer For Swap")
@@ -77,28 +79,19 @@ def bore_align_off(plugin):
     
 def swap(plugin):
     #if the current_extruder is not None then unload first
-    if plugin.current_extruder != None:
+    if plugin.insertLoaded:
         plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="There is a currently loaded insert. Attempting to unload Insert."))
         
-        #if there is an insert loaded already then unload it first
-        if self.insertLoaded:
-            try:
-                unload_result = unload_insert(plugin)
-                if unload_result != "OK":
-                    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Unload failed: {unload_result}"))
-                    return jsonify(result="False", error=unload_result), 500
-            except Exception as e:
-                plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Exception during unload: {str(e)}"))
-                return jsonify(result="False", error=str(e)), 500
+        unload_result = unload_insert(plugin)
 
-            plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Unload successful"))
-            return jsonify(result="True")
+    load_insert(plugin, plugin.next_extruder)
 
-    #load the next insert
-    try:
-        success, error = load_insert(plugin, plugin.next_extruder)
-        if not success:
-            plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Failed to load insert: {error}"))
-            return jsonify(result="False", error=str(error)), 500
-    except Exception as e:
-        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Failed to load insert: {str(e)}"))
+    
+    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"swap.Next extruder: {plugin.next_extruder}"))
+    #***********
+    gcode_commands = [f"T{plugin.next_extruder}"]# ****-> This is causing an infinite loop! Also it shouldn't because the current and next extruder should be equal at this point
+    #***********
+    plugin._printer.commands(gcode_commands)
+        
+    plugin.SwapInProcess = False
+        

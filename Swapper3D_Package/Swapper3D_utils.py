@@ -88,6 +88,7 @@ def perform_command(plugin, command, WaitForOk=True):
         elif check_response:
             send_plugin_message(plugin, response)
             if response and response.startswith("ok"):
+                send_plugin_message(plugin, f"Command '{command}' succeeded.")
                 return True, None
         else:
             send_plugin_message(plugin, f"Command '{command}' failed.")
@@ -101,27 +102,35 @@ def retrieveFirmwareVersion(plugin):
 def load_insert(plugin, insert_number):
     # Check the printer is connected
     if not plugin._printer.is_operational():
-        send_plugin_message(plugin, "Printer must be connected to Swap!")
+        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Printer must be connected to Swap!"))
         return "Printer not connected" 
 
     command = f"load_insert{insert_number}"
-    send_plugin_message(plugin, f"Sending command to load_insert insert {insert_number}")
-    return perform_command(plugin, command)
+    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Sending command to load_insert insert {insert_number}"))
+
+    
+    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Sending command to load_insert insert: {str(int(insert_number) + 1)}"))
+
+
+    
+    if perform_command(plugin, command):
+        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Swapper3D load_insert: Successfully loaded insert: {str(insert_number)}"))
+        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="currentlyLoadedInsert", message=str(insert_number)))
+        
+        plugin.insertLoaded = True
+    else:
+        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Failed to load"))
+
+    return "OK"
 
 def unload_insert(plugin):
     # Check the printer is connected
     if not plugin._printer.is_operational():
-        send_plugin_message(plugin, "Printer must be connected to Swap!")
+        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Printer must be connected to Swap!"))
         return "Printer not connected" 
 
-    #Commented for testing
-    #uncomment for production
-    # # Check the hotend temperature
-    # hotend_temp = plugin._printer.get_current_temperatures()['tool0']['actual']
-    # if hotend_temp < 200:
-        # send_plugin_message(plugin, "Hotend temperature is less than 200C")
-        # return "Hotend too cold to Swap!" 
-    
+    UnloadSuccess = True # set to true here and False if there is an error somewhere in this method
+
     # Get the settings
     filamentSwitcherType = plugin._settings.get(["filamentSwitcherType"])
     extrudeSpeedPulldown = plugin._settings.get(["extrudeSpeedPulldown"])
@@ -134,32 +143,32 @@ def unload_insert(plugin):
     msDelayAfterExtrude = plugin._settings.get(["msDelayAfterExtrude"])
     msDelayPerDegreeMovedDuringSwapPulldown = plugin._settings.get(["msDelayPerDegreeMovedDuringSwapPulldown"])
     retractLengthAfterCut = plugin._settings.get(["retractLengthAfterCut"])
-
-    #palette settings
+    retractSpeed = plugin._settings.get(["retractSpeed"])
+    
+    
+    # palette settings
     extrudeSpeedPaletteCuts = plugin._settings.get(["extrudeSpeedPaletteCuts"])
     numPaletteCuts = plugin._settings.get(["numPaletteCuts"])
     lengthAdditionalCut = plugin._settings.get(["lengthAdditionalCut"])
     delayAfterCut = int(plugin._settings.get(["delayAfterCut"]))
-    
-        
+
     # Check if msDelayAfterExtrude is not None
     if msDelayAfterExtrude is not None:
         # Convert msDelayAfterExtrude to float
         delayAfterExtrude = float(msDelayAfterExtrude)
 
         # Send a message to the plugin with the delay time
-        send_plugin_message(plugin, f"Delaying for {msDelayAfterExtrude} milliseconds before extruding...")
+        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Delaying for {msDelayAfterExtrude} milliseconds before extruding..."))
     else:
-        send_plugin_message(plugin, "msDelayAfterExtrude setting is not defined.") 
+        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="msDelayAfterExtrude setting is not defined."))
         return
+
+    # begin unload sequence
+    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Executing unload"))
         
-        
-    #begin unload sequence
-    send_plugin_message(plugin, "Executing unload")
-            
     gcode_commands = ["M302 P0 ;allow cold extrusion",
                       f"M203 E{SwapExtruderMaxFeedrate}",
-                      f"M201 E{SwapExtruderMaxAcceleration}"] 
+                      f"M201 E{SwapExtruderMaxAcceleration}"]
     plugin._printer.commands(gcode_commands)
             
     perform_command(plugin, "unload_connect")
@@ -171,37 +180,37 @@ def unload_insert(plugin):
     #the first command is a delay/sleep/pause, which allow the Swapper3D to get a head start on the pulldown
     gcode_commands = [f"G4 P{delayAfterExtrude}",
                       "G92 E0 ;reset extrusion distance",
-                      f"G1 E{extrudeLengthLockingHeight} F{extrudeSpeedPulldown}"] 
+                      f"G1 E{extrudeLengthLockingHeight} F{extrudeSpeedPulldown}"]
     plugin._printer.commands(gcode_commands)
-   
-    send_plugin_message(plugin, f"msDelayPerDegreeMovedDuringSwapPulldown: {msDelayPerDegreeMovedDuringSwapPulldown}")
+  
+    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"msDelayPerDegreeMovedDuringSwapPulldown: {msDelayPerDegreeMovedDuringSwapPulldown}"))
     perform_command(plugin, f"unload_pulldown_lockingheight{msDelayPerDegreeMovedDuringSwapPulldown}")
     
-    #pulldown to cutting height
+    # pulldown to cutting height
     # Extrude filament at the same time as the pulldown 
     gcode_commands = [f"G4 P{delayAfterExtrude}",
                       "G92 E0 ;reset extrusion distance",
-                      f"G1 E{extrudeLengthCuttingHeight} F{extrudeSpeedPulldown}"] 
+                      f"G1 E{extrudeLengthCuttingHeight} F{extrudeSpeedPulldown}"]
     plugin._printer.commands(gcode_commands)
    
-    send_plugin_message(plugin, f"msDelayPerDegreeMovedDuringSwapPulldown: {msDelayPerDegreeMovedDuringSwapPulldown}")
+    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"msDelayPerDegreeMovedDuringSwapPulldown: {msDelayPerDegreeMovedDuringSwapPulldown}"))
     perform_command(plugin, f"unload_pulldown_cuttingheight{msDelayPerDegreeMovedDuringSwapPulldown}")
     
-    #deploy the cutter
-    #cut once
-    #stow the insert
+    # deploy the cutter
+    # cut once
+    # stow the insert
     perform_command(plugin, "unload_deploycutter")
 
-    #whether it's palette or mmu it always needs to cut and stow the insert
+    # whether it's Palette or MMU it always needs to cut and stow the insert
     perform_command(plugin, "unload_cut")
         
-    #palette multi cuts
+    # palette multi cuts
     if filamentSwitcherType == "Palette":
-        #move the tool arm out of the way a little so it's very quick
+        # move the tool arm out of the way a little so it's very quick
         perform_command(plugin, "unload_AvoidBin")
         
         intNumPaletteCuts  = int(numPaletteCuts)
-        
+
         # start palette cut loop
         for _ in range(intNumPaletteCuts):
             # extrude
@@ -214,12 +223,11 @@ def unload_insert(plugin):
             # cut
             perform_command(plugin, "unload_cut")
         # end palette cut loop
-        
-        
-    #retract filament
-    #Send the G-code commands to prepare for swap
+
+    # retract filament
+    # Send the G-code commands to prepare for swap
     gcode_commands = ["G92 E0 ;reset extrusion distance"
-                     ,f"G1 E{retractLengthAfterCut} F{extrudeSpeedPulldown}"]
+                     ,f"G1 E{retractLengthAfterCut} F{retractSpeed}"]
     plugin._printer.commands(gcode_commands)
     
     perform_command(plugin, "unload_stowInsert", True)
@@ -228,14 +236,22 @@ def unload_insert(plugin):
     if filamentSwitcherType == "Palette":
         perform_command(plugin, "unload_dumpWaste")  # Palette only.
 
-    
-    #set the feedrate and accel back to Stock
+    # set the feedrate and acceleration back to Stock
     gcode_commands = [f"M203 E{StockExtruderMaxFeedrate}",
-                      f"M201 E{StockExtruderMaxAcceleration}"] 
+                      f"M201 E{StockExtruderMaxAcceleration}"]
     plugin._printer.commands(gcode_commands)
 
-    return "OK"  # Return OK if all commands were successfully executed.
+    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"UnloadSuccess: {UnloadSuccess}"))
 
+    if UnloadSuccess:        
+        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="currentlyLoadedInsert", message="Empty"))
+        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Swapped to insert: Empty"))
+
+        plugin.insertLoaded = False
+    else:
+        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Failed to Unload"))
+
+    return "OK"
 
 def get_firmware_version(plugin):
     version_parts = []
@@ -250,8 +266,14 @@ def get_firmware_version(plugin):
 
     return '.'.join(version_parts), None
 
-
-
+def unload_filament(plugin):
+    unload_insert(plugin)
+    
+    gcode_commands = [f"M702 C"]
+    plugin._printer.commands(gcode_commands)
+    
+    plugin.SwapInProcess = False
+    
 def try_handshake(plugin):
     arduino_ports = [port.device for port in serial.tools.list_ports.comports() if 'Arduino Uno' in port.description]
     #commented out to force only try connect on Arduino ports. This will save time and prevent interfering with the printer connection.

@@ -5,7 +5,6 @@ from .Swapper3D_utils import * #import all methods
 from .Swap_utils import *
 import time
 
-
 def handle_command(self):
     data = request.json
     command = data.get("command")
@@ -76,64 +75,41 @@ def handle_command(self):
 
         return jsonify(result="True")
 
-
     elif command == "load_insert":
         if self.insertLoaded:
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Insert is already loaded; Must unload first."))
             return
-    
-
-        insert_number = data.get("insert_number")
-
-        # Debug log: Print the raw 'insert_number' value received
-        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Raw insert_number received: {insert_number}"))
 
         try:
-            insert_number = int(insert_number)
+            # Debug log: Print the raw 'insert_number' value received
+            data = request.json
+            command = data.get("command")
+            insert_number = data.get("insert_number")
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"on_gcode_received.->Insert number:{insert_number}"))
+            self.loadThisInsert = insert_number
+                       
+            HomeAxis = True 
+            current_z = 0 
+            PreparePrinterForSwap(self, current_z, HomeAxis, "readyForLoadInsert")
+            
         # Ensure 'insert_number' is an integer
         except ValueError:
             # If 'insert_number' cannot be converted to an integer, log an error and return
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Invalid insert_number: cannot convert to integer"))
             return jsonify(result="False", error="Invalid insert_number: cannot convert to integer"), 400
-
-        # Debug log: Print the validated 'insert_number' value
-        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Validated insert_number: {insert_number}"))
-
-        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Attempting to swap to insert#: {insert_number}"))
-
-        try:
-            success, error = load_insert(self, insert_number)
             
-            if not success:
-                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Failed to swap to insert: {error}"))
-                return jsonify(result="False", error=str(error)), 500
-
-            self.insertLoaded = True
-
-        except Exception as e:
-            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Failed to swap to insert: {str(e)}"))
-            return jsonify(result="False", error=str(e)), 500
-
-
-        self._plugin_manager.send_plugin_message(self._identifier, dict(type="currentlyLoadedInsert", message=str(insert_number)))
-        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Swapped to insert: {insert_number}"))
-
-        return jsonify(result=str(success))
+        return jsonify(result="True")
         
     elif command == "unload":
         if not self.insertLoaded:
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Insert is not already loaded; Must load first."))
-            return
-        
-    
+            return   
+
         self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Received command: " + command))
         try:
-            unload_result = unload_insert(self)
-            if unload_result != "OK":
-                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Unload failed: {unload_result}"))
-                return jsonify(result="False", error=unload_result), 500
-            
-            self.insertLoaded = False
+            HomeAxis = True 
+            current_z = 0 
+            PreparePrinterForSwap(self, current_z, HomeAxis, "readyForUnload")
         except Exception as e:
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Exception during unload: {str(e)}"))
             return jsonify(result="False", error=str(e)), 500
