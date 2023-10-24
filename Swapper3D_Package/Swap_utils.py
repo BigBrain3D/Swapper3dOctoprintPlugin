@@ -88,9 +88,8 @@ def swap(plugin):
 
     
     plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"swap.Next extruder: {plugin.next_extruder}"))
-    #***********
-    gcode_commands = [f"T{plugin.next_extruder}"]# ****-> This is causing an infinite loop! Also it shouldn't because the current and next extruder should be equal at this point
-    #***********
+
+    gcode_commands = [f"T{plugin.next_extruder}"]
     plugin._printer.commands(gcode_commands)
         
     plugin.SwapInProcess = False

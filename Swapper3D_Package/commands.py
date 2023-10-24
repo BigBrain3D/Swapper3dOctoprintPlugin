@@ -127,7 +127,7 @@ def handle_command(self):
             
             HomeAxis = True  # Assuming you want to Home Axis when borealignon command is received
             current_z = 0  # Assuming the Z-position is 0 at this point
-            PreparePrinterForSwap(self, current_z, HomeAxis, "readyforborealignment")
+            PreparePrinterForSwap(self, current_z, HomeAxis, "readyForBoreAlignment")
             
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Bore alignment ON"))
             return jsonify(result="True")

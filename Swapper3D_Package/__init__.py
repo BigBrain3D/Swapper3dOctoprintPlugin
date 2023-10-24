@@ -120,6 +120,8 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                 return None #prevent the T command from being issued to the printer. It will be sent from the swap method
                 
             if gcode.startswith("M702") and not self.SwapInProcess:
+                self.SwapInProcess = True
+                
                 HomeAxis = True #set to False for production
                 current_z = 0
                 try:
@@ -134,7 +136,7 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                     self._logger.error(f"Exception occurred while getting current Z position: {e}")
             
                 #send command "unload" to commands.py handle_command
-                thread = threading.Thread(target=PreparePrinterForSwap, args=(self, current_z, HomeAxis, "readyForUnloadFilament")) 
+                thread = threading.Thread(target=PreparePrinterForSwap, args=(self, current_z, HomeAxis, "readyForFilamentUnload")) 
                 thread.start()
                 return None #prevent the unload command from being sent to the printer. It will be sent from the unload command
                 
@@ -152,7 +154,7 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
     #this is gcode FROM THE PRINTER
     def on_gcode_received(self, comm, line, *args, **kwargs):
         # Check if the line contains our echo (case insensitive)
-        if "readyforborealignment" in line.lower():
+        if "readyForBoreAlignment" in line:
             # Finally, turn on bore alignment
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="command echo from printer: borealignon"))
             try:
@@ -164,8 +166,10 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                     self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Bore alignment on failed: {error}"))
             except Exception as e:
                 self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Exception during bore alignment on: {str(e)}"))
+            
+            return line
 
-        if "readyforswap" in line.lower():
+        if "readyForSwap" in line:
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="command echo from printer: readyforswap"))
             try:                    
                 success, error = swap(self)
@@ -183,28 +187,27 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
 
                 if not success:
                     self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Swap failed: {error}"))
+                
             except Exception as e:
                 self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Exception during Swap: {str(e)}"))
-                
-        if "readyforloadinsert" in line.lower():
-            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="command echo from printer: readyForUnload"))
-
-            thread = threading.Thread(target=load_insert, args=(self, self.loadThisInsert)) 
-            thread.start()
             
-        if "readyforunload" in line.lower():
-            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="command echo from printer: readyForUnload"))
-
-            thread = threading.Thread(target=unload_insert, args=(self,)) 
-            thread.start()
-        
+            return line
                 
-        if "readyforunloadfilament" in line.lower():
+        if "readyForLoadInsert" in line:
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="command echo from printer: readyForLoad Insert"))
+            load_insert(self, self.loadThisInsert)
+            return line
+            
+        if "readyForUnload" in line:
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="command echo from printer: readyForUnload"))
-
-            thread = threading.Thread(target=unload_filament, args=(self,)) 
-            thread.start()
-        
+            unload_insert(self)
+            return line
+                
+        if "readyForFilamentUnload" in line:
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="command echo from printer: readyForUnloadFilament"))
+            unload_filament(self)
+            return line
+            
         return line
             
     def get_template_configs(self):

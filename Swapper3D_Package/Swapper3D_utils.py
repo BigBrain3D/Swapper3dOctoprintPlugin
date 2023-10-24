@@ -267,12 +267,19 @@ def get_firmware_version(plugin):
     return '.'.join(version_parts), None
 
 def unload_filament(plugin):
-    unload_insert(plugin)
+    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="unload_filament called"))
+
+    if plugin.insertLoaded:
+        unload_insert(plugin)
+    else:
+        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="No insert in QuickSwap-Hotend"))
     
+    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="sending M702 C back to queue"))
     gcode_commands = [f"M702 C"]
     plugin._printer.commands(gcode_commands)
     
     plugin.SwapInProcess = False
+    return "OK"
     
 def try_handshake(plugin):
     arduino_ports = [port.device for port in serial.tools.list_ports.comports() if 'Arduino Uno' in port.description]
