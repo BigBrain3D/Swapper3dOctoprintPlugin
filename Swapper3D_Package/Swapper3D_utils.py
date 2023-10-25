@@ -275,7 +275,7 @@ def unload_filament(plugin):
         plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="No insert in QuickSwap-Hotend"))
     
     plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="sending M702 C back to queue"))
-    gcode_commands = [f"M702 C"]
+    gcode_commands = [f"M702 C ;Sent by Swapper3D_utils.unload_filament()"]
     plugin._printer.commands(gcode_commands)
     
     plugin.SwapInProcess = False

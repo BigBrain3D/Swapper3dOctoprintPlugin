@@ -61,8 +61,31 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                 self._logger.info("Swapper3D is disconnected")
                 return
                 
+            #this is the tool command that we add back after the swap so that the printer will switch the filament using the MMU
+            if ";Tool change sent by Swap_utils.swap()" in gcode:
+                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Sent command to switch filament with MMU"))
+                return
+
+            if ";Sent by Swapper3D_utils.unload_filament()" in gcode:
+                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Sent command to unload the filament with MMU"))
+                return
+                
+            if (gcode.startswith("T") 
+                and self.SwapInProcess):
+                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Tool change command sent while in Swap"))
+                self.SwapInProcess = False
+                return
+                
+            if (gcode.startswith("M702") 
+                and self.SwapInProcess):
+                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Filament unload sent mmand sent while in Swap"))
+                self.SwapInProcess = False
+                return
+            
             # If the command is a tool change command (starts with "T")
-            if gcode.startswith("T") and not self.SwapInProcess:
+            if (gcode.startswith("T") 
+            and not self.SwapInProcess):
+                
                 self.SwapInProcess = True
             
                 # Log a message indicating the processing of the tool change command
@@ -70,8 +93,7 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
 
                 # Update the next extruder based on the command
                 self.next_extruder = cmd[1:]
-                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"hook_gcode_queuing.current extruder: {self.current_extruder}"))
-                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"hook_gcode_queuing.Next extruder: {self.next_extruder}"))
+                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f" {self.current_extruder}"))
 
                 # If the print has not started yet,
                 if not self.is_print_started:
@@ -117,9 +139,12 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                 thread = threading.Thread(target=PreparePrinterForSwap, args=(self, current_z, HomeAxis, "readyForSwap")) 
                 thread.start()
                 
-                return None #prevent the T command from being issued to the printer. It will be sent from the swap method
+                # return None #prevent the T command from being issued to the printer. It will be sent from the swap method
+                return ";Tool change command intercepted"
                 
-            if gcode.startswith("M702") and not self.SwapInProcess:
+            if (gcode.startswith("M702") 
+            and not self.SwapInProcess):
+            
                 self.SwapInProcess = True
                 
                 HomeAxis = True #set to False for production
@@ -138,7 +163,7 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                 #send command "unload" to commands.py handle_command
                 thread = threading.Thread(target=PreparePrinterForSwap, args=(self, current_z, HomeAxis, "readyForFilamentUnload")) 
                 thread.start()
-                return None #prevent the unload command from being sent to the printer. It will be sent from the unload command
+                return "Filament Unload command intercepted" #prevent the unload command from being sent to the printer. It will be sent from the unload command
                 
 
         except Exception as e:
@@ -171,26 +196,29 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
 
         if "readyForSwap" in line:
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="command echo from printer: readyforswap"))
-            try:                    
-                success, error = swap(self)
-                
-                #insert the tool command here so that the filament is switched
-                gcode_commands = f"T{self.next_extruder}"
-                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Injecting Tool change: {gcode_commands}"))
-                self._printer.commands(gcode_commands)
-                
-                #what about the wipe?
-                
-                self.current_extruder = self.next_extruder  # current_extruder becomes next_extruder
-                self.next_extruder = None
-                self._printer.commands("@resume")
-
-                if not success:
-                    self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Swap failed: {error}"))
-                
-            except Exception as e:
-                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Exception during Swap: {str(e)}"))
             
+            if self.next_extruder is not None: # Add a pre-check for next_extruder
+                try:                    
+                    success, error = swap(self)
+
+                    #insert the tool command here so that the filament is switched
+                    gcode_commands = f"T{self.next_extruder} ;Tool change sent by init.on_gcode_received()"
+                    self._printer.commands(gcode_commands)
+
+                    #what about the wipe?
+
+                    self.current_extruder = self.next_extruder  # current_extruder becomes next_extruder
+                    self.next_extruder = None
+                    self._printer.commands("@resume") #what is this for??
+
+                    if not success:
+                        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Swap failed: {error}"))
+
+                except Exception as e:
+                    self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Exception during Swap: {str(e)}"))
+            else:
+                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Next extruder not set. Swap operation not executed."))
+
             return line
                 
         if "readyForLoadInsert" in line:
@@ -206,6 +234,7 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
         if "readyForFilamentUnload" in line:
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="command echo from printer: readyForUnloadFilament"))
             unload_filament(self)
+            self.SwapInProcess = False
             return line
             
         return line

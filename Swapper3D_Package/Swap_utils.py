@@ -87,10 +87,12 @@ def swap(plugin):
     load_insert(plugin, plugin.next_extruder)
 
     
-    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"swap.Next extruder: {plugin.next_extruder}"))
+    # plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"swap.Next extruder: {plugin.next_extruder}"))
 
-    gcode_commands = [f"T{plugin.next_extruder}"]
-    plugin._printer.commands(gcode_commands)
+    # gcode_commands = [f"T{plugin.next_extruder} ;Tool change sent by Swap_utils.swap()"]
+    # plugin._printer.commands(gcode_commands)
         
-    plugin.SwapInProcess = False
-        
+    
+    # plugin.SwapInProcess = False # this is now set to false in the init gcode received section
+
+    return True, str("")
