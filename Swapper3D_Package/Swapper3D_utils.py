@@ -109,12 +109,8 @@ def load_insert(plugin, insert_number):
     plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Sending command to load_insert insert {insert_number}"))
 
     
-    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Sending command to load_insert insert: {str(int(insert_number) + 1)}"))
-
-
-    
     if perform_command(plugin, command):
-        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Swapper3D load_insert: Successfully loaded insert: {str(insert_number)}"))
+        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Swapper3D_utils.load_insert: Successfully loaded insert: {str(insert_number)}"))
         plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="currentlyLoadedInsert", message=str(insert_number)))
         
         plugin.insertLoaded = True
@@ -166,6 +162,7 @@ def unload_insert(plugin):
     # begin unload sequence
     plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Executing unload"))
         
+    NumberOfAllowedOks = 3
     gcode_commands = ["M302 P0 ;allow cold extrusion",
                       f"M203 E{SwapExtruderMaxFeedrate}",
                       f"M201 E{SwapExtruderMaxAcceleration}"]
@@ -178,6 +175,7 @@ def unload_insert(plugin):
     #all these commands are sent to the printer at the same time
     #octoprint moves on but the printer tries to execute the commands
     #the first command is a delay/sleep/pause, which allow the Swapper3D to get a head start on the pulldown
+    NumberOfAllowedOks = 3
     gcode_commands = [f"G4 P{delayAfterExtrude}",
                       "G92 E0 ;reset extrusion distance",
                       f"G1 E{extrudeLengthLockingHeight} F{extrudeSpeedPulldown}"]
@@ -188,6 +186,7 @@ def unload_insert(plugin):
     
     # pulldown to cutting height
     # Extrude filament at the same time as the pulldown 
+    NumberOfAllowedOks = 3
     gcode_commands = [f"G4 P{delayAfterExtrude}",
                       "G92 E0 ;reset extrusion distance",
                       f"G1 E{extrudeLengthCuttingHeight} F{extrudeSpeedPulldown}"]
@@ -214,6 +213,7 @@ def unload_insert(plugin):
         # start palette cut loop
         for _ in range(intNumPaletteCuts):
             # extrude
+            NumberOfAllowedOks = 2
             gcode_commands = ["G92 E0 ;reset extrusion distance", 
                              f"G1 E{lengthAdditionalCut} F{extrudeSpeedPaletteCuts}"]
             plugin._printer.commands(gcode_commands)
@@ -226,6 +226,7 @@ def unload_insert(plugin):
 
     # retract filament
     # Send the G-code commands to prepare for swap
+    NumberOfAllowedOks = 2
     gcode_commands = ["G92 E0 ;reset extrusion distance"
                      ,f"G1 E{retractLengthAfterCut} F{retractSpeed}"]
     plugin._printer.commands(gcode_commands)
@@ -237,6 +238,7 @@ def unload_insert(plugin):
         perform_command(plugin, "unload_dumpWaste")  # Palette only.
 
     # set the feedrate and acceleration back to Stock
+    NumberOfAllowedOks = 2
     gcode_commands = [f"M203 E{StockExtruderMaxFeedrate}",
                       f"M201 E{StockExtruderMaxAcceleration}"]
     plugin._printer.commands(gcode_commands)
@@ -251,7 +253,7 @@ def unload_insert(plugin):
     else:
         plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Failed to Unload"))
 
-    return "OK"
+    return True
 
 def get_firmware_version(plugin):
     version_parts = []
@@ -272,14 +274,15 @@ def unload_filament(plugin):
     if plugin.insertLoaded:
         unload_insert(plugin)
     else:
-        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="No insert in QuickSwap-Hotend"))
+        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="No insert in QuickSwap-Hotend. Unload Skipped."))
     
     plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="sending M702 C back to queue"))
+    NumberOfAllowedOks = 1
     gcode_commands = [f"M702 C ;Sent by Swapper3D_utils.unload_filament()"]
     plugin._printer.commands(gcode_commands)
     
     plugin.SwapInProcess = False
-    return "OK"
+    return True
     
 def try_handshake(plugin):
     arduino_ports = [port.device for port in serial.tools.list_ports.comports() if 'Arduino Uno' in port.description]
