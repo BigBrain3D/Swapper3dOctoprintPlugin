@@ -72,14 +72,14 @@ def perform_command(plugin, command, WaitForOk=True):
     write_message_with_parity(plugin, command)
     time.sleep(1)
 
-    send_plugin_message(plugin, f"Sending command {command} to Swapper3D")
 
     if not WaitForOk:
+        send_plugin_message(plugin, f"Sending command {command} to Swapper3D. NOT waiting for OK")
         return True, None
 
     # Keep reading responses until an 'ok' is received
-    while True:
-    
+    while True:    
+        # send_plugin_message(plugin, f"Sending command {command} to Swapper3D. Wait for OK")
         check_response, response = read_and_check_response(plugin)
 
         # If the response is empty, continue reading responses
@@ -231,8 +231,14 @@ def unload_insert(plugin):
                      ,f"G1 E{retractLengthAfterCut} F{retractSpeed}"]
     plugin._printer.commands(gcode_commands)
     
+    
+    #commented out because the cutter guard is under the hotend for a long time and there is concern it could melt
+    # perform_command(plugin, "unload_stowInsert", True)
+    # perform_command(plugin, "unload_stowCutter")
+
+    perform_command(plugin, "unload_stowCutter", True) #must be true. Failing to wait can cause an OK in the wrong stop
     perform_command(plugin, "unload_stowInsert", True)
-    perform_command(plugin, "unload_stowCutter")
+
 
     if filamentSwitcherType == "Palette":
         perform_command(plugin, "unload_dumpWaste")  # Palette only.

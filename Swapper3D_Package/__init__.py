@@ -47,7 +47,6 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
             os.makedirs(os.path.dirname(self.log_file_path), exist_ok=True)
             self._logger.info("Created a new log file at start of print: " + self.log_file_path)
             self.isPrintStarted = True
-            self.hasStartGcodeRun = False
             self.is_print_done = False
 
         if event == "PrintDone":
@@ -80,6 +79,7 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
 
             # Indicate that the print has started
             self.hasStartGcodeRun = True
+            
 
     #this is gcode placed into the queue BEFORE sending to the printer
     #perhaps should be "return cmd," ??
@@ -90,51 +90,48 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
         self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"hook_gcode_queuing.cmd:{cmd}"))
         self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"hook_gcode_queuing.SwapInProcess:{self.SwapInProcess}"))
         try:        
-            if not comm_instance.isOperational():
-                # self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"printer is not connected"))
-                return
 
-            #if there is no gcode then return
-            if not gcode: 
-                # self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"not gcode"))
-                return
+            # #if there is no gcode then return
+            # if not gcode: 
+                # # self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"not gcode"))
+                # return
 
-            #Do we care if it's not printing?
+            #Do we care if it's not printing? NO 
             # if not comm_instance.isPrinting():
                 # return
-                
-            if self.serial_conn is None:
-                # self._logger.info("Swapper3D is disconnected")
-                # self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Swapper3D is disconnected"))
-                return
                 
             if (cmd.startswith("T") 
                 and self.SwapInProcess):
                 self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Tool change command sent while in Swap"))
                 self.SwapInProcess = False
+                self._printer.commands("@resume")
+                plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"*****Swap_utils.swap().Swap complete - self.SwapInProcess{self.SwapInProcess}*****"))
                 return
                 
             if (cmd.startswith("M702") 
                 and self.SwapInProcess):
                 self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Filament unload sent command sent while in Swap"))
                 self.SwapInProcess = False
+                self._printer.commands("@resume")
                 return
             
             # If the command is a tool change command (starts with "T")
             if (cmd.startswith("T") 
             and not self.SwapInProcess):
-            
-                # self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Enqueue Paused"))
-                # self._printer.pause_print()
-            
+                if not comm_instance.isOperational():
+                    self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Printer is not connected"))
+                    return
+                
+                if self.serial_conn is None:
+                    # self._logger.info("Swapper3D is disconnected")
+                    self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Swapper3D is disconnected"))
+                    return
             
                 self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"hook_gcode_queuing.Processing tool change cmd:{cmd}"))
                 # self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"gcode: {gcode}"))
                 # self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"cmd: {cmd}"))
                 # self._logger.info("Processing tool change command")
-                
-                self.SwapInProcess = True
-            
+                          
 
                 # Update the next extruder based on the command
                 self.next_extruder = cmd[1:]
@@ -152,39 +149,54 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                     self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Current and next Tools are the same AND the initial load is complete. Skipping swap."))
                     return None #make sure that the tool change doesn't happen. If it did the filament would be pulled, uncut, from the quickswap insert
 
-                # Indicate that the printer does not need to rehome its axis
-                HomeAxis = True #set to False for production
-                
                 # Initialize current_z outside the try block
                 current_z = 0
-
-                try:
-                    # Get the current Z position of the printer
-                    current_z = self._printer.get_current_data()["currentZ"]
+                
+                #if the printer is printing then assume that it's already been homed
+                #otherwise it's probably a manually issued T command and then the printer should be homed Just to be safe
+                if comm_instance.isPrinting():
+                    HomeAxis = False
                     
-                    # If obtained Z position is None, set it to 0
-                    if current_z is None:
-                        current_z = 0
-                except Exception as e:
-                    # Handle or log any exceptions that occurred while getting current_z
-                    self._plugin_manager.send_plugin_message(f"Exception occurred while getting current Z position: {e}")
+                    #only try to get the current Z during a print
+                    #otherwise the Tool command was sent manually
+                    #and the printer will be homed
+                    #which means that the Z will be zero(0) and the Z needs to be moved up to 95
+                    try:
+                        # Get the current Z position of the printer
+                        current_z = self._printer.get_current_data()["currentZ"]
+                        
+                        # If obtained Z position is None, set it to 0
+                        if current_z is None:
+                            current_z = 0
+                    except Exception as e:
+                        # Handle or log any exceptions that occurred while getting current_z
+                        self._plugin_manager.send_plugin_message(f"Exception occurred while getting current Z position: {e}")
+                else:
+                    #should ALWAYS be true becuase the users could have moved the Z position manually between the load and subsequent load/unloads
+                    HomeAxis = True
+                
+
 
                 # Send the current Z position to the plugin manager
                 self._plugin_manager.send_plugin_message(self._identifier, dict(type="current_z", message=str(current_z)))
 
                 # Prepare the printer for the swap
+                self.SwapInProcess = True
+                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Enqueue Paused"))
+                self._printer.commands("@pause")
+                # self._printer.pause_print() #don't need this
+                
                 thread = threading.Thread(target=PreparePrinterForSwap, args=(self, current_z, HomeAxis, "readyForSwap")) 
                 thread.start()
                 
                 self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"T{self.next_extruder} command intercepted"))
                 return None #prevent the T command from being issued to the printer. It will be sent from the swap method
                 
-            if ("M73 Q100" in cmd
-                and not self.SwapInProcess):
-            
-                self.SwapInProcess = True
-                
-                HomeAxis = True #set to False for production
+            if  (not self.SwapInProcess
+                and ("M73 Q100" in cmd
+                    or cmd.startswith("M702"))):
+                            
+                HomeAxis = False #set to False for production
                 current_z = 0
                 try:
                     # Get the current Z position of the printer
@@ -198,6 +210,9 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                     self._plugin_manager.send_plugin_message(f"Exception occurred while getting current Z position: {e}")
             
                 #send command "unload" to commands.py handle_command
+                self.SwapInProcess = True
+                self._printer.commands("@pause")
+                
                 thread = threading.Thread(target=PreparePrinterForSwap, args=(self, current_z, HomeAxis, "readyForFilamentUnload")) 
                 thread.start()
                 return None #"Filament Unload command intercepted" #prevent the unload command from being sent to the printer. It will be sent from the unload command
@@ -220,6 +235,7 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
             and not line == ""):
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"on_gcode_received.line:{line}"))
 
+        #this prevents Octoprint from automatically reverting the tool when it sends a T0 command
         if "Invalid extruder" in line:
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Tool reversion stopped"))
             return None
@@ -233,8 +249,8 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
             #return line
     
         # if (self.SwapInProcess
-            # and line.lower() == "ok"
-            # and self.NumberOfAllowedOks==0):
+            # and line.lower() == "ok"):
+            # #and self.NumberOfAllowedOks==0):
             # self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"line:{line}"))
             # self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"ok BLOCKED!"))
             # return None
@@ -243,10 +259,10 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
         if "readyForBoreAlignment" in line:
             # Finally, turn on bore alignment
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="command echo from printer: borealignon"))
-            try:
+            try:            
                 success, error = bore_align_on(self)
                 
-                self._printer.commands("@resume")
+                # self._printer.commands("@resume")
 
                 if not success:
                     self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Bore alignment on failed: {error}"))
@@ -258,29 +274,14 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
         if "readyForSwap" in line:
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="command echo from printer: readyforswap"))
             
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"on_gcode_received.Current extruder: {self.current_extruder}"))
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"on_gcode_received.Next extruder: {self.next_extruder}"))
+            
             if self.next_extruder is not None: # Add a pre-check for next_extruder
                 try:                    
-                    success, error = swap(self)
-
-                    #insert the tool command here so that the filament is switched
-                    self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Tool change sent by init.on_gcode_received()"))
-                    gcode_commands = f"T{self.next_extruder}"
-                    self._printer.commands(gcode_commands)
-
-                    #what about the wipe?
-
-                    self.current_extruder = self.next_extruder  # current_extruder becomes next_extruder
-                    self.next_extruder = None
-                    
-                    #resume enqueueing/reading/parsing the gcode file
-                    self._printer.commands("@resume") #what is this for??
-                    # self._printer.resume_print()
-                    
-                    self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"on_gcode_received.Current extruder: {self.current_extruder}"))
-                    self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"on_gcode_received.Next extruder: {self.next_extruder}"))
-
-                    if not success:
-                        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Swap failed: {error}"))
+                
+                    thread = threading.Thread(target=swap, args=(self,)) 
+                    thread.start()                    
 
                 except Exception as e:
                     self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Exception during Swap: {str(e)}"))
@@ -291,18 +292,28 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                 
         if "readyForLoadInsert" in line:
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="command echo from printer: readyForLoad Insert"))
-            load_insert(self, self.loadThisInsert)
+            
+            thread = threading.Thread(target=load_insert, args=(self, self.loadThisInsert)) 
+            thread.start()
+            
+            # load_insert(self, self.loadThisInsert)
             return line
             
         if "readyForUnload" in line:
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="command echo from printer: readyForUnload"))
-            unload_insert(self)
+            
+            thread = threading.Thread(target=unload_insert, args=(self,)) 
+            thread.start()
+            
+            # unload_insert(self)
             return line
                 
         if "readyForFilamentUnload" in line:
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="command echo from printer: readyForUnloadFilament"))
-            unload_filament(self)
-            self.SwapInProcess = False
+                        
+            thread = threading.Thread(target=unload_filament, args=(self,)) 
+            thread.start()
+            
             return line
             
         return line

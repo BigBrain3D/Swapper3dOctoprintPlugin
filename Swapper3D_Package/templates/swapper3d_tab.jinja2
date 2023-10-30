@@ -34,8 +34,16 @@
 
     <br><br>
 
-    <h3>Swapper3D Log</h3>
+    <h3>Swapper3D Log</h3>     
+    <div class="flex-container">
+		<label for="Autoscroll">Autoscroll (on/off):</label>
+		<label class="switch">
+			<input type="checkbox" id="Autoscroll" title="Default: On" data-bind="checked: settings.plugins.Swapper3D.Autoscroll" checked>
+			<span class="slider round"></span>
+		</label>
+    </div>
     <textarea id="Swapper3DLog" class="form-control" rows="5" style="width:100%"></textarea>
+
 
     <br><br>
 <!--
@@ -63,3 +71,14 @@
         <img src="{{ url_for('plugin.Swapper3D.static', filename='img/BigBrain3D-Logo-2022-1.jpg') }}" alt="BigBrain3D Logo" style="width:50%">
     </a>
 </div>
+
+<!-- Add this to your CSS file or in a style block -->
+<style>
+    .flex-container {
+        display: flex;
+        align-items: center;
+    }
+    .flex-container > label.switch {
+        margin-left: 10px;
+    }
+</style>

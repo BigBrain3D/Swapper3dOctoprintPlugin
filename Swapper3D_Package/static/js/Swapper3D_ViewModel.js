@@ -25,7 +25,11 @@ function Swapper3DViewModel(parameters) {
         var existingContent = $("#Swapper3DLog").val();
         var newContent = existingContent + message + "\n";
         $("#Swapper3DLog").val(newContent);
-        $("#Swapper3DLog").scrollTop($("#Swapper3DLog")[0].scrollHeight);
+		
+		// Autoscroll if the #Autoscroll checkbox is checked
+		if ($("#Autoscroll").prop("checked")) {
+			$("#Swapper3DLog").scrollTop($("#Swapper3DLog")[0].scrollHeight);
+		}
     };
 
     self.connectSwapper3D = function() {

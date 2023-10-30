@@ -23,56 +23,40 @@ from .Swapper3D_utils import perform_command, send_plugin_message, load_insert, 
 # 6) Octoprint , which has been monitoring all outgoing printer communications, receives the echo "some octoprint command (ready for swap, or ready for bore alignment, for example)
 # 7) octoprint now knows that the print head is in the swap position
 # 8) octoprint executes the requested command
-def PreparePrinterForSwap(plugin, currentZofPrinter, HomeAxis, EchoCommand):    
+def PreparePrinterForSwap(plugin, currentZofPrinter, HomeAxis, EchoCommand):
     # Get the min_z_height from the settings
     min_z_height = plugin._settings.get(["zHeight"])
     x_pos = plugin._settings.get(["xPos"])
     y_pos = plugin._settings.get(["yPos"])
     
     # Initialize the gcode_commands list. Add "G28 XYZ" if HomeAxis is True.
-    send_plugin_message(plugin, f"Sending stepper timeout 999")
     gcode_commands = ["M84 X S999"]  # Keep the X-axis stepper motors enabled indefinitely
-    plugin._printer.commands(gcode_commands)
-    
-    
     if HomeAxis:
-        send_plugin_message(plugin, f"Sending XYZ home")
-        gcode_commands = ["G28 XYZ"]  # Home all axis if HomeAxis is set to True
-        plugin._printer.commands(gcode_commands)
+        gcode_commands.append("G28 XYZ")  # Home all axis if HomeAxis is set to True
    
     # Send message with currentZofPrinter and min_z_height values
     send_plugin_message(plugin, f"Swapper3D_utils.PreparePrinterForSwap.currentZofPrinter: {currentZofPrinter}, min_z_height: {min_z_height}")
     
     # Check if the Z movement is necessary
     if int(currentZofPrinter) < int(min_z_height):
-        send_plugin_message(plugin, f"Swapper3D_utils.PreparePrinterForSwap: Raising to min Z height")
-        gcode_commands = [f"G1 Z{str(min_z_height)}"]  # Raise Z to the min Z height if needed
-        plugin._printer.commands(gcode_commands)
+        gcode_commands.append(f"G1 Z{str(min_z_height)}")  # Raise Z to the min Z height if needed
         
     # Move to the specific X and Y coordinates
-    send_plugin_message(plugin, f"Swapper3D_utils.PreparePrinterForSwap: Moving to XY position")
-    gcode_commands = [f"G1 X{x_pos} Y{y_pos} F6000"]
-    plugin._printer.commands(gcode_commands)
+    gcode_commands.append(f"G1 X{x_pos} Y{y_pos} F6000")  
+
 
         
     # Add the remaining commands
-    send_plugin_message(plugin, f"Sending G4")
-    gcode_commands = ["G4"]  # The G4 command will wait until the previous movement commands are complete before it allows any more commands to be queued
-    plugin._printer.commands(gcode_commands)
+    gcode_commands.extend([
+        "G4",  # The G4 command will wait until the previous movement commands are complete before it allows any more commands to be queued
+        f"M118 E1 {EchoCommand}",   # Echo command updated
+        f"M117 E1 {EchoCommand}"   # Echo command updated works with virtual printer
+    ])
 
-    send_plugin_message(plugin, f"Sending M118")
-    gcode_commands = [f"M118 E1 {EchoCommand}"]   # Echo command updated
-    plugin._printer.commands(gcode_commands)
-        
-    send_plugin_message(plugin, f"Sending M117")
-    gcode_commands = [f"M117 E1 {EchoCommand}"]   # Echo command updated works with virtual printer
-    plugin._printer.commands(gcode_commands)
-
-    # send_plugin_message(plugin, f"Sending commands to printer to Prepare Printer For Swap")
-    send_plugin_message(plugin, f"Sent commands to printer to Prepare Printer For Swap")
+    send_plugin_message(plugin, f"Sending commands to printer to Prepare Printer For Swap")
 
     # Send the G-code commands to prepare for swap
-    # plugin._printer.commands(gcode_commands)
+    plugin._printer.commands(gcode_commands)
     
     #pause all gcode commands
     #resumes in the on_gcode_received method init py or the borealignoff
@@ -106,6 +90,18 @@ def swap(plugin):
     
     plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Swap_utils.swap.next_extruder:{plugin.next_extruder}"))
     load_insert(plugin, plugin.next_extruder)
+    
+    
+    
+    #insert the tool command here so that the filament is switched
+    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Tool change sent by Swap_utils.swap()"))
+    gcode_commands = f"T{plugin.next_extruder}"
+    plugin._printer.commands(gcode_commands)
+
+    #what about the wipe?
+
+    plugin.current_extruder = plugin.next_extruder  # current_extruder becomes next_extruder
+    plugin.next_extruder = None
 
     #because the number of the insert can be none 
     #we need to keep track if the current insert is the first loaded 
@@ -116,5 +112,9 @@ def swap(plugin):
     #nothing to unload
     if not plugin.InitialLoadComplete:
         plugin.InitialLoadComplete = True
+        
+        
+    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="*****Swap_utils.swap().Swap complete*****"))
+ 
         
     return True, str("")
