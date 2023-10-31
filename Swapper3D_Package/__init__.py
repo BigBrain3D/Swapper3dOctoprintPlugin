@@ -87,8 +87,9 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
     #don't send commands to the printer in here. It will get stuck and freeze the whole plugin
     def hook_gcode_queuing(self, comm_instance, phase, cmd, cmd_type, gcode, subcode=None, tags=None, *args, **kwargs):        
         #show all queued commands
-        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"hook_gcode_queuing.cmd:{cmd}"))
-        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"hook_gcode_queuing.SwapInProcess:{self.SwapInProcess}"))
+        # self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"hook_gcode_queuing.cmd:{cmd}"))
+        # self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"hook_gcode_queuing.SwapInProcess:{self.SwapInProcess}"))
+        
         try:        
 
             # #if there is no gcode then return
@@ -105,12 +106,12 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                 self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Tool change command sent while in Swap"))
                 self.SwapInProcess = False
                 self._printer.commands("@resume")
-                plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"*****Swap_utils.swap().Swap complete - self.SwapInProcess{self.SwapInProcess}*****"))
+                self._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"*****Swap_utils.swap().Swap complete - self.SwapInProcess{self.SwapInProcess}*****"))
                 return
                 
             if (cmd.startswith("M702") 
                 and self.SwapInProcess):
-                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Filament unload sent command sent while in Swap"))
+                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Filament unload command sent while in Swap"))
                 self.SwapInProcess = False
                 self._printer.commands("@resume")
                 return
@@ -231,9 +232,9 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
     #this is gcode FROM THE PRINTER
     def on_gcode_received(self, comm, line, *args, **kwargs):
         #show all received commands
-        if (not line.startswith("T:")
-            and not line == ""):
-            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"on_gcode_received.line:{line}"))
+        # if (not line.startswith("T:")
+            # and not line == ""):
+            # self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"on_gcode_received.line:{line}"))
 
         #this prevents Octoprint from automatically reverting the tool when it sends a T0 command
         if "Invalid extruder" in line:

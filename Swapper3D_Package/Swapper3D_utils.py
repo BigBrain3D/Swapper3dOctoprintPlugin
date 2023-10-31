@@ -206,7 +206,7 @@ def unload_insert(plugin):
     # palette multi cuts
     if filamentSwitcherType == "Palette":
         # move the tool arm out of the way a little so it's very quick
-        perform_command(plugin, "unload_AvoidBin")
+        perform_command(plugin, "unload_AvoidBin") #why is there a delay after this before the extrude?? In the firmware there is zero(0)ms delay so it should be instant.
         
         intNumPaletteCuts  = int(numPaletteCuts)
 
@@ -287,7 +287,7 @@ def unload_filament(plugin):
     gcode_commands = [f"M702 C ;Sent by Swapper3D_utils.unload_filament()"]
     plugin._printer.commands(gcode_commands)
     
-    plugin.SwapInProcess = False
+    #plugin.SwapInProcess = False #cannot set to false here or it will cause an infinite loop
     return True
     
 def try_handshake(plugin):

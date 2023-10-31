@@ -39,7 +39,7 @@ def PreparePrinterForSwap(plugin, currentZofPrinter, HomeAxis, EchoCommand):
     
     # Check if the Z movement is necessary
     if int(currentZofPrinter) < int(min_z_height):
-        gcode_commands.append(f"G1 Z{str(min_z_height)}")  # Raise Z to the min Z height if needed
+        gcode_commands.append(f"G1 Z{min_z_height}")  # Move Z only the needed amount
         
     # Move to the specific X and Y coordinates
     gcode_commands.append(f"G1 X{x_pos} Y{y_pos} F6000")  
