@@ -162,8 +162,7 @@ def unload_insert(plugin):
     # begin unload sequence
     plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Executing unload"))
         
-    NumberOfAllowedOks = 3
-    gcode_commands = ["M302 P0 ;allow cold extrusion",
+    gcode_commands = ["M302 P1 ;allow cold extrusion",
                       f"M203 E{SwapExtruderMaxFeedrate}",
                       f"M201 E{SwapExtruderMaxAcceleration}"]
     plugin._printer.commands(gcode_commands)
@@ -175,7 +174,6 @@ def unload_insert(plugin):
     #all these commands are sent to the printer at the same time
     #octoprint moves on but the printer tries to execute the commands
     #the first command is a delay/sleep/pause, which allow the Swapper3D to get a head start on the pulldown
-    NumberOfAllowedOks = 3
     gcode_commands = [f"G4 P{delayAfterExtrude}",
                       "G92 E0 ;reset extrusion distance",
                       f"G1 E{extrudeLengthLockingHeight} F{extrudeSpeedPulldown}"]
@@ -245,7 +243,8 @@ def unload_insert(plugin):
 
     # set the feedrate and acceleration back to Stock
     NumberOfAllowedOks = 2
-    gcode_commands = [f"M203 E{StockExtruderMaxFeedrate}",
+    gcode_commands = ["M302 S170 ;disable cold extrusion",
+                      f"M203 E{StockExtruderMaxFeedrate}",
                       f"M201 E{StockExtruderMaxAcceleration}"]
     plugin._printer.commands(gcode_commands)
 

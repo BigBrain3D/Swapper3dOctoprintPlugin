@@ -34,7 +34,6 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
         self.loadThisInsert = None #used to pass the requested manual load insert number
         self.SwapInProcess = False #when true then don't start another swap
         self.InitialLoadComplete = False #because the currently loaded insert is zero(0) we need this value to know if the first initial tool load has been done
-        self.NumberOfAllowedOks = 1 #use during swap prcess to allow only our swap commands to execute on the printer and capture the last OK to keep the print paused
 
 
     def on_event(self, event, payload):
