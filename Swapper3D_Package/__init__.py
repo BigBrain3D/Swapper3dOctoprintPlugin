@@ -111,7 +111,7 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                 e_value = self.get_e_value_from_cmd(cmd)
                 if e_value is not None:
                     self.extrusionSinceLastSwap += e_value
-                    self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"hook_gcode_queuing.E value increased:{self.extrusionSinceLastSwap}"))
+                    # self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"hook_gcode_queuing.E value increased:{self.extrusionSinceLastSwap}"))
             
             #remember the current hotend temperature
             if ((cmd.startswith("M109")

@@ -294,7 +294,7 @@ def Stow_Wiper(plugin):
     perform_command(plugin, "wiper_stow", True)
     
     #Restore the fan to its original speed
-    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Swapper3D_utils.Stow_Wiper: Printer resumed. Setting fan speed to: {plugin.current_fan_speed}"))
+    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Swapper3D_utils.Stow_Wiper: Printer resumed. Setting fan speed to: {plugin.current_fan_speed}"))
     gcode_commands = [f"M106 S{plugin.current_fan_speed} ;restore fan speed",
                       "@resume"]
     plugin._printer.commands(gcode_commands)
