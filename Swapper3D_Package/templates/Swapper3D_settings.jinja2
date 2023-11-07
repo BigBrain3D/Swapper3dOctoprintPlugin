@@ -32,6 +32,67 @@
         <label for="zHeight">Minimum Z height:</label>
         <input type="number" id="zHeight" title="MMU:82, Palette:95" data-bind="value: settings.plugins.Swapper3D.zHeight" placeholder="MMU:82, Palette:95">
     </div>
+
+
+
+
+
+	
+    <h4>Nozzle wipe settings</h4>
+    <div class="flex-layout">
+        <label for="NozzleWipe">Nozzle wipe procedure (on/off):</label>
+        <label class="switch">
+            <input type="checkbox" id="NozzleWipe" title="Default: On" data-bind="checked: settings.plugins.Swapper3D.NozzleWipe">
+            <span class="slider round"></span>
+        </label>
+    </div>
+	
+    <div class="flex-layout">
+        <label for="BreakString">Break string before swap (on/off):</label>
+        <label class="switch">
+            <input type="checkbox" id="BreakString" title="Default: On" data-bind="checked: settings.plugins.Swapper3D.BreakString">
+            <span class="slider round"></span>
+        </label>
+    </div>
+	
+    <div class="flex-layout">
+        <label for="yBreakStringPosition">Y break string position:</label>
+        <input type="number" id="yBreakStringPosition" title="Default:175" data-bind="value: settings.plugins.Swapper3D.yBreakStringPosition" placeholder="Default:175">
+    </div>
+    
+    <div class="flex-layout">
+        <label for="yBreakStringSpeed">Y break string Speed:</label>
+        <input type="number" id="yBreakStringSpeed" title="Default:10200" data-bind="value: settings.plugins.Swapper3D.yBreakStringSpeed" placeholder="Default:10200">
+    </div>
+    
+    <div class="flex-layout">
+        <label for="xPositionAfterWipe">X Position After Wipe:</label>
+        <input type="number" id="xPositionAfterWipe" title="Default:100" data-bind="value: settings.plugins.Swapper3D.xPositionAfterWipe" placeholder="Default:100">
+    </div>
+    
+    <div class="flex-layout">
+        <label for="xMinPositionForWipe">xMinPositionForWipe:</label>
+        <input type="number" id="xMinPositionForWipe" title="Default:215.0" data-bind="value: settings.plugins.Swapper3D.xMinPositionForWipe" placeholder="Default:215.0">
+    </div>
+    
+    <div class="flex-layout">
+        <label for="xMaxPositionForWipe">xMaxPositionForWipe:</label>
+        <input type="number" id="xMaxPositionForWipe" title="Default:230.0" data-bind="value: settings.plugins.Swapper3D.xMaxPositionForWipe" placeholder="Default:230.0">
+    </div>
+	
+    <div class="flex-layout">
+        <label for="DelayAfterExtruderMovedToWipeLocationBeforeDeployingWiper">Delay After ExtruderMoved To Wipe Location BeforeDeploying Wiper (ms):</label>
+        <input type="number" id="DelayAfterExtruderMovedToWipeLocationBeforeDeployingWiper" title="Default:200" data-bind="value: settings.plugins.Swapper3D.DelayAfterExtruderMovedToWipeLocationBeforeDeployingWiper" placeholder="Default:200">
+    </div>
+	
+    <div class="flex-layout">
+        <label for="MinExtrusionBeforeSwap">Min Extrusion Before Swap(mm):</label>
+        <input type="number" id="MinExtrusionBeforeSwap" title="Default:10" data-bind="value: settings.plugins.Swapper3D.MinExtrusionBeforeSwap" placeholder="Default:10">
+    </div>
+	
+	
+	
+	
     
     <h4>General</h4>
 	<div class="flex-layout">
@@ -93,15 +154,6 @@
         <label for="msDelayPerDegreeMovedDuringSwapPulldown">ms of delay per degree moved during pulldowns:</label>
         <input type="number" id="msDelayPerDegreeMovedDuringSwapPulldown" title="Default: 6" data-bind="value: settings.plugins.Swapper3D.msDelayPerDegreeMovedDuringSwapPulldown" placeholder="Default: 6">
     </div>
-
-    <div class="flex-layout">
-        <label for="NozzleWipe">Nozzle wipe procedure (on/off):</label>
-        <label class="switch">
-            <input type="checkbox" id="NozzleWipe" title="Default: On" data-bind="checked: settings.plugins.Swapper3D.NozzleWipe">
-            <span class="slider round"></span>
-        </label>
-    </div>
-	
 	
     <h4>Palette</h4>
     <div class="flex-layout">

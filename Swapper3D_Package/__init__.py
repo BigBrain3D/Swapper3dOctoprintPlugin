@@ -8,7 +8,7 @@ from .commands import handle_command
 from .gcode_injector import inject_gcode
 from .default_settings import get_default_settings
 from .Swap_utils import PreparePrinterForSwap, bore_align_on, bore_align_off, swap
-from .Swapper3D_utils import load_insert, unload_insert, unload_filament
+from .Swapper3D_utils import load_insert, unload_insert, unload_filament, Stow_Wiper, try_handshake
 
 class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                       octoprint.plugin.TemplatePlugin,
@@ -34,6 +34,9 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
         self.loadThisInsert = None #used to pass the requested manual load insert number
         self.SwapInProcess = False #when true then don't start another swap
         self.InitialLoadComplete = False #because the currently loaded insert is zero(0) we need this value to know if the first initial tool load has been done
+        self.currentTargetTemp = 0 #used to remember any temp that is set before a swap so that it can be returned to that temp after the swap completes
+        self.current_fan_speed = 0 #used to remember if the fan was on and to turn it off while swapping and restore it after swap is complete
+        self.extrusionSinceLastSwap = 0 #used to prevent a swap unless the extusion is at least the min from settings. reset in Swap_utils.swap()
 
 
     def on_event(self, event, payload):
@@ -62,6 +65,8 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
             
     def on_after_startup(self):
         self._logger.info("Swapper3D plugin has started!")
+        success, error = try_handshake(self)
+        self.serial_conn = success
 
     def runStartGcode(self):
         # If the print has not started yet,
@@ -79,6 +84,16 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
             # Indicate that the print has started
             self.hasStartGcodeRun = True
             
+            
+    def get_e_value_from_cmd(self, cmd):
+        try:
+            parts = cmd.split(" ")
+            for part in parts:
+                if part.startswith("E"):
+                    return float(part[1:])
+        except ValueError:
+            pass
+        return None
 
     #this is gcode placed into the queue BEFORE sending to the printer
     #perhaps should be "return cmd," ??
@@ -90,7 +105,34 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
         # self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"hook_gcode_queuing.SwapInProcess:{self.SwapInProcess}"))
         
         try:        
-
+            #sum all extrusion
+            #extrusionSinceLastSwap
+            if (cmd.startswith("G1") or cmd.startswith("G0")):
+                e_value = self.get_e_value_from_cmd(cmd)
+                if e_value is not None:
+                    self.extrusionSinceLastSwap += e_value
+                    self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"hook_gcode_queuing.E value increased:{self.extrusionSinceLastSwap}"))
+            
+            #remember the current hotend temperature
+            if ((cmd.startswith("M109")
+                or cmd.startswith("M104"))
+                and not self.SwapInProcess):
+                self.currentTargetTemp = cmd.split("S")[1]
+                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Temp recorded:{self.currentTargetTemp}"))
+                
+            #remember the current fan speed
+            if (cmd.startswith("M106")
+                and not self.SwapInProcess):
+                self.current_fan_speed = cmd.split("S")[1]
+                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Fan speed recorded:{self.current_fan_speed}"))
+                
+            #remember if the fan is turned off
+            if (cmd.startswith("M107")
+                and not self.SwapInProcess):
+                self.current_fan_speed = "0"
+                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Fan turned off (recorded)"))
+                
+            #we're looking at cmd not gcode now, and if there isn't anything there then a tool change cannot be triggered
             # #if there is no gcode then return
             # if not gcode: 
                 # # self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"not gcode"))
@@ -103,9 +145,16 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
             if (cmd.startswith("T") 
                 and self.SwapInProcess):
                 self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Tool change command sent while in Swap"))
-                self.SwapInProcess = False
-                self._printer.commands("@resume")
-                self._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"*****Swap_utils.swap().Swap complete - self.SwapInProcess{self.SwapInProcess}*****"))
+                
+                NozzleWipe = self._settings.get(["NozzleWipe"])
+                #if NozzleWipe == False then resume here
+                #otherwise swap is resumed in Swapper3D_utils.Stow_Wiper()
+                if not NozzleWipe:
+                    self.SwapInProcess = False
+                    self._printer.commands("@resume")
+                                
+                self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"*****Swap_utils.swap().Swap complete - self.SwapInProcess{self.SwapInProcess}*****"))
+                
                 return
                 
             if (cmd.startswith("M702") 
@@ -144,10 +193,20 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                 # if the initial load is not complete and the current ext is not none then skip this guard
                 #, log the corresponding message and return
                 if (self.InitialLoadComplete 
-                    and self.current_extruder is not None 
-                    and self.current_extruder == self.next_extruder):
+                and self.current_extruder is not None 
+                and self.current_extruder == self.next_extruder):
                     self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Current and next Tools are the same AND the initial load is complete. Skipping swap."))
                     return None #make sure that the tool change doesn't happen. If it did the filament would be pulled, uncut, from the quickswap insert
+
+                #Stop the Swap if the filament extuded 
+                #since the last swap is less than the minimum
+                MinExtrusionBeforeSwap = int(self._settings.get(["MinExtrusionBeforeSwap"]))
+                if (self.InitialLoadComplete 
+                and self.current_extruder is not None 
+                and self.extrusionSinceLastSwap < MinExtrusionBeforeSwap):
+                    self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Prevented swap because of too short extusion: {self.extrusionSinceLastSwap}"))
+                    return None #not enough extrusion to get the filament into the insert, so prevent this tool change, otherwise the filament will get pulled out and jam the print head
+
 
                 # Initialize current_z outside the try block
                 current_z = 0
@@ -239,21 +298,6 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
         if "Invalid extruder" in line:
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Tool reversion stopped"))
             return None
-
-        # if (self.SwapInProcess
-            # and line.lower() == "ok"
-            # and self.NumberOfAllowedOks-1 > 0):
-            # self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"line:{line}"))
-            # self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"NumberOfAllowedOks:{self.NumberOfAllowedOks}"))
-            # self.NumberOfAllowedOks -= self.NumberOfAllowedOks
-            #return line
-    
-        # if (self.SwapInProcess
-            # and line.lower() == "ok"):
-            # #and self.NumberOfAllowedOks==0):
-            # self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"line:{line}"))
-            # self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"ok BLOCKED!"))
-            # return None
             
         # Check if the line contains our echo (case insensitive)
         if "readyForBoreAlignment" in line:
@@ -312,6 +356,14 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="command echo from printer: readyForUnloadFilament"))
                         
             thread = threading.Thread(target=unload_filament, args=(self,)) 
+            thread.start()
+            
+            return line
+            
+        if "StowWiper" in line:
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="command echo from printer: readyForUnloadFilament"))
+                        
+            thread = threading.Thread(target=Stow_Wiper, args=(self,)) 
             thread.start()
             
             return line

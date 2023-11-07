@@ -26,9 +26,9 @@ def handle_command(self):
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Connection lost after handshake."))
             return jsonify(result="False", error="Connection lost after handshake"), 500
 
-        self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Connected"))
-        time.sleep(3)
-        self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Ready to Swap!"))
+        # self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Connected"))
+        # time.sleep(3)
+        # self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Ready to Swap!"))
         return jsonify(result=str(success))
 
     elif command == "send":

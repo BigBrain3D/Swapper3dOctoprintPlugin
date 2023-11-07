@@ -1,7 +1,8 @@
 # Octoprint plugin name: Swapper3D, File: Swap_utils.py, Author: BigBrain3D, License: AGPLv3 
 
-from .Swapper3D_utils import perform_command, send_plugin_message, load_insert, unload_insert
-
+import random
+import time
+from .Swapper3D_utils import perform_command, send_plugin_message, load_insert, unload_insert, Deploy_Wiper, Stow_Wiper
 
 # def SendStartGcodeToPrinter(plugin):
     #fill this in with the initial gcode required
@@ -28,9 +29,19 @@ def PreparePrinterForSwap(plugin, currentZofPrinter, HomeAxis, EchoCommand):
     min_z_height = plugin._settings.get(["zHeight"])
     x_pos = plugin._settings.get(["xPos"])
     y_pos = plugin._settings.get(["yPos"])
+    yBreakStringPosition = plugin._settings.get(["yBreakStringPosition"])
+    yBreakStringSpeed = plugin._settings.get(["yBreakStringSpeed"])
+    BreakString = plugin._settings.get(["BreakString"])
     
     # Initialize the gcode_commands list. Add "G28 XYZ" if HomeAxis is True.
-    gcode_commands = ["M84 X S999"]  # Keep the X-axis stepper motors enabled indefinitely
+    gcode_commands = ["M84 X S999", # Keep the X-axis stepper motors enabled indefinitely
+                      "M107"] # Turn off cooling fan
+    
+    if BreakString:
+        gcode_commands.append(f"G1 Y{yBreakStringPosition} F{yBreakStringSpeed}") #Y move to break the string before Z lift)
+    
+    gcode_commands.append("G4")
+    
     if HomeAxis:
         gcode_commands.append("G28 XYZ")  # Home all axis if HomeAxis is set to True
    
@@ -42,8 +53,7 @@ def PreparePrinterForSwap(plugin, currentZofPrinter, HomeAxis, EchoCommand):
         gcode_commands.append(f"G1 Z{min_z_height}")  # Move Z only the needed amount
         
     # Move to the specific X and Y coordinates
-    gcode_commands.append(f"G1 X{x_pos} Y{y_pos} F6000")  
-
+    gcode_commands.append(f"G1 X{x_pos} Y{y_pos} F6000")
 
         
     # Add the remaining commands
@@ -57,11 +67,7 @@ def PreparePrinterForSwap(plugin, currentZofPrinter, HomeAxis, EchoCommand):
 
     # Send the G-code commands to prepare for swap
     plugin._printer.commands(gcode_commands)
-    
-    #pause all gcode commands
-    #resumes in the on_gcode_received method init py or the borealignoff
-    # plugin._printer.commands("@pause")
-    
+        
 
 # Function to turn on bore alignment
 def bore_align_on(plugin):
@@ -79,26 +85,57 @@ def bore_align_off(plugin):
     
 def swap(plugin):
     plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Swap_utils.swap: In Swap!"))
+    NozzleWipe = plugin._settings.get(["NozzleWipe"])
+    xMinPositionForWipe = int(plugin._settings.get(["xMinPositionForWipe"]))
+    xMaxPositionForWipe = int(plugin._settings.get(["xMaxPositionForWipe"]))
+    randomXpositionForWipe = random.randint(xMinPositionForWipe,xMaxPositionForWipe)
+    DelayAfterExtruderMovedToWipeLocationBeforeDeployingWiper = int(plugin._settings.get(["DelayAfterExtruderMovedToWipeLocationBeforeDeployingWiper"]))
+    xPositionAfterWipe = int(plugin._settings.get(["xPositionAfterWipe"]))
+    yBreakStringSpeed = plugin._settings.get(["yBreakStringSpeed"])
     
+    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"randomXpositionForWipe:{randomXpositionForWipe}"))
+
     #if the current_extruder is not None then unload first
     if plugin.insertLoaded:
         plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="There is a currently loaded insert. Attempting to unload Insert."))
-        
+
         unload_result = unload_insert(plugin)
 
 
-    
+    #Load the next insert
     plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Swap_utils.swap.next_extruder:{plugin.next_extruder}"))
     load_insert(plugin, plugin.next_extruder)
-    
-    
-    
+                          
+    #if the wipe procedure is ON
+    #move extruder to RANDOM X-axis wipe location
+    #deploy the wiper to RANDOM angle
+    if NozzleWipe:
+        gcode_commands = [f"G1 X{randomXpositionForWipe} F6000",
+                              f"G4"]
+        plugin._printer.commands(gcode_commands)
+        
+        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Swap_utils.swap:Waiting for random X move"))
+        time.sleep(DelayAfterExtruderMovedToWipeLocationBeforeDeployingWiper/1000) #Delay after moving extruder to wipe location
+        
+        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Swap_utils.swap:Waiting to deloy wiper"))
+        #deploy the wiper
+        Deploy_Wiper(plugin)
+        
+    #change tool
+    #send WAIT for temp heat up
+    #signal temp heat up complete with M117/M118
+    gcode_commands =[f"T{plugin.next_extruder}",
+                     f"M109 S{plugin.currentTargetTemp}", #Wait for heat to stabilize
+                     "G4",
+                     "G1 X{xPositionAfterWipe} F{yBreakStringSpeed}", #move extruder off the wipe pad (this if the actual "wipe")
+                     "G4",
+                     "M118 E1 StowWiper",   # Echo command updated works with i3
+                     "M117 E1 StowWiper"]  # Echo command updated works with virtual printer
     #insert the tool command here so that the filament is switched
     plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Tool change sent by Swap_utils.swap()"))
-    gcode_commands = f"T{plugin.next_extruder}"
     plugin._printer.commands(gcode_commands)
 
-    #what about the wipe?
+    
 
     plugin.current_extruder = plugin.next_extruder  # current_extruder becomes next_extruder
     plugin.next_extruder = None

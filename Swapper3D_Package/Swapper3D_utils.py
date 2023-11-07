@@ -184,7 +184,6 @@ def unload_insert(plugin):
     
     # pulldown to cutting height
     # Extrude filament at the same time as the pulldown 
-    NumberOfAllowedOks = 3
     gcode_commands = [f"G4 P{delayAfterExtrude}",
                       "G92 E0 ;reset extrusion distance",
                       f"G1 E{extrudeLengthCuttingHeight} F{extrudeSpeedPulldown}"]
@@ -211,7 +210,6 @@ def unload_insert(plugin):
         # start palette cut loop
         for _ in range(intNumPaletteCuts):
             # extrude
-            NumberOfAllowedOks = 2
             gcode_commands = ["G92 E0 ;reset extrusion distance", 
                              f"G1 E{lengthAdditionalCut} F{extrudeSpeedPaletteCuts}"]
             plugin._printer.commands(gcode_commands)
@@ -224,7 +222,6 @@ def unload_insert(plugin):
 
     # retract filament
     # Send the G-code commands to prepare for swap
-    NumberOfAllowedOks = 2
     gcode_commands = ["G92 E0 ;reset extrusion distance"
                      ,f"G1 E{retractLengthAfterCut} F{retractSpeed}"]
     plugin._printer.commands(gcode_commands)
@@ -242,7 +239,6 @@ def unload_insert(plugin):
         perform_command(plugin, "unload_dumpWaste")  # Palette only.
 
     # set the feedrate and acceleration back to Stock
-    NumberOfAllowedOks = 2
     gcode_commands = ["M302 S170 ;disable cold extrusion",
                       f"M203 E{StockExtruderMaxFeedrate}",
                       f"M201 E{StockExtruderMaxAcceleration}"]
@@ -282,11 +278,31 @@ def unload_filament(plugin):
         plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="No insert in QuickSwap-Hotend. Unload Skipped."))
     
     plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="sending M702 C back to queue"))
-    NumberOfAllowedOks = 1
     gcode_commands = [f"M702 C ;Sent by Swapper3D_utils.unload_filament()"]
     plugin._printer.commands(gcode_commands)
     
     #plugin.SwapInProcess = False #cannot set to false here or it will cause an infinite loop
+    return True
+    
+def Deploy_Wiper(plugin):
+    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Swapper3D_utils.Deploy_Wiper()"))
+    perform_command(plugin, "wiper_deploy", True)
+    return True
+    
+    
+def Stow_Wiper(plugin):
+    perform_command(plugin, "wiper_stow", True)
+    
+    #Restore the fan to its original speed
+    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Swapper3D_utils.Stow_Wiper: Printer resumed. Setting fan speed to: {plugin.current_fan_speed}"))
+    gcode_commands = [f"M106 S{plugin.current_fan_speed} ;restore fan speed",
+                      "@resume"]
+    plugin._printer.commands(gcode_commands)
+    
+    
+    plugin.SwapInProcess = False
+    plugin.extrusionSinceLastSwap = 0
+    
     return True
     
 def try_handshake(plugin):
@@ -325,6 +341,10 @@ def try_handshake(plugin):
                     plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Handshake successful!"))
                     plugin._settings.set(["serialPort"], port)
                     plugin._settings.set(["baudrate"], ser.baudrate)
+                    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="connectionState", message="Connected"))
+                    time.sleep(3)
+                    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="connectionState", message="Ready to Swap!"))
+
                     return ser, None
                 else:
                     attempts -= 1
