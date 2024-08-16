@@ -245,7 +245,7 @@ def unload_insert(plugin):
     plugin._printer.commands(gcode_commands)
 
     
-    perform_command(plugin, "unloaded_message", False)#added Aug 16th 2024, reset the LCD message to "Ready to Swap!" and Insert "EMPTY"
+    #perform_command(plugin, "unloaded_message", False)#added Aug 16th 2024, reset the LCD message to "Ready to Swap!" and Insert "EMPTY"
     plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"UnloadSuccess: {UnloadSuccess}"))
 
     if UnloadSuccess:        
