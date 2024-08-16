@@ -43,6 +43,11 @@ def PreparePrinterForSwap(plugin, currentZofPrinter, HomeAxis, EchoCommand):
     gcode_commands.append("G4")
     
     if HomeAxis:
+        gcode_commands.append("M211 S0")  # Added on Aug 16th 2024.
+        gcode_commands.append("G411 S0")  # Added on Aug 16th 2024.
+        gcode_commands.append("G1 X-10 F2000")  # Added on Aug 16th 2024. When a homing command is issued the printer automatically moves to the right some mm, which causes it to crash into the swapper and stop homing X, which then causes the head to be too far to the right for the Z home which causes the head to crash into the bed because the PINDA probe is off the right side of the bed. Adding a small movement to the left should prevent this.
+        gcode_commands.append("M211 S1")  # Added on Aug 16th 2024.
+        gcode_commands.append("G4")  # Added on Aug 16th 2024.
         gcode_commands.append("G28 XYZ")  # Home all axis if HomeAxis is set to True
    
     # Send message with currentZofPrinter and min_z_height values
