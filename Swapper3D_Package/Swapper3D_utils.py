@@ -111,7 +111,7 @@ def load_insert(plugin, insert_number):
     
     if perform_command(plugin, command):
         plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Swapper3D_utils.load_insert: Successfully loaded insert: {str(insert_number)}"))
-        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="currentlyLoadedInsert", message=str(insert_number)))
+        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="currentlyLoadedInsert", message=str(insert_number  + 1))) #updated Aug 17th 2024 makes the "Currently loaded insert" text box in the Swapper3D tab show the same number as the sticker on the tool holder wheel.
         
         plugin.insertLoaded = True
     else:
