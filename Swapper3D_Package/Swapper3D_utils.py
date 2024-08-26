@@ -67,32 +67,61 @@ def read_and_check_response(plugin):
         send_plugin_message(plugin, "Received empty response")
         return None, None
 
+
+
 # Abstract the common operations of swap_to_insert and unload_insert into one function
 def perform_command(plugin, command, WaitForOk=True):
+    # Send the command with parity to the Swapper3D device
     write_message_with_parity(plugin, command)
     time.sleep(1)
 
-
     if not WaitForOk:
-        send_plugin_message(plugin, f"Sending command {command} to Swapper3D. NOT waiting for OK")
+        # Log that we are sending the command without waiting for an "ok" response
+        send_plugin_message(plugin, f"2A.Sending command {command} to Swapper3D. NOT waiting for OK")
         return True, None
 
-    # Keep reading responses until an 'ok' is received
-    while True:    
-        # send_plugin_message(plugin, f"Sending command {command} to Swapper3D. Wait for OK")
-        check_response, response = read_and_check_response(plugin)
+    # Construct the expected response string, which should match the command followed by "_ok"
+    expected_response_prefix = f"{command}_ok"
+    
+    while True:
+        # Read and check the response from the device
+        check_response, response_without_parity = read_and_check_response(plugin)
 
-        # If the response is empty, continue reading responses
+        # Debugging the full original response (including the parity bit)
+        # send_plugin_message(plugin, f"Full Response: [{response_without_parity}]")
+
+        # If the response is empty, continue reading until a valid response is received
         if check_response is None:
             continue
         elif check_response:
-            send_plugin_message(plugin, response)
-            if response and response.startswith("ok"):
-                send_plugin_message(plugin, f"Command '{command}' succeeded.")
+            # Log the actual response received and compare it to the expected response
+            comparison_result = "same" if response_without_parity == expected_response_prefix else "not the same"
+            
+            # Log the character-by-character comparison
+            # response_chars = ' '.join(f"[{ord(c)}]" for c in response_without_parity)
+            # expected_chars = ' '.join(f"[{ord(c)}]" for c in expected_response_prefix)
+
+            # debug_message = (
+                # f"Received: [{response_without_parity}] "
+                # f"compared to Expected: [{expected_response_prefix}] - {comparison_result}\n"
+                # f"Response chars: {response_chars}\n"
+                # f"Expected chars: {expected_chars}"
+            # )
+            # send_plugin_message(plugin, debug_message)
+
+            # If the response matches the expected command-specific 'ok', log success and return
+            if response_without_parity == expected_response_prefix:
+                send_plugin_message(plugin, f"2B.Command '{command}' succeeded.")
                 return True, None
         else:
-            send_plugin_message(plugin, f"Command '{command}' failed.")
+            # Log if the parity check failed and return an error
+            send_plugin_message(plugin, f"2C.Command '{command}' failed.")
             return False, "Parity check did not pass."
+
+
+
+
+
 
 def retrieveFirmwareVersion(plugin):
     command = "RetrieveCurrentFirmwareVersion"
@@ -111,7 +140,7 @@ def load_insert(plugin, insert_number):
     
     if perform_command(plugin, command):
         #updated Aug 17th 2024 makes the "Currently loaded insert" text box in the Swapper3D tab show the same number as the sticker on the tool holder wheel.
-        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Swapper3D_utils.load_insert: Successfully loaded insert: {str(int(insert_number) + 1)}"))
+        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"3.Aug23.Swapper3D_utils.load_insert: OK received? Successfully loaded insert: {str(int(insert_number) + 1)}"))
         plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="currentlyLoadedInsert", message=str(int(insert_number) + 1))) 
 
         
@@ -119,7 +148,7 @@ def load_insert(plugin, insert_number):
     else:
         plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Failed to load"))
 
-    return "OK"
+    return True #"OK" updated Aug 23rd 2024
 
 def unload_insert(plugin):
     # Check the printer is connected

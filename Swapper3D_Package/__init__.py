@@ -377,10 +377,13 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
 
     def get_assets(self):
         return {"js": ["js/Swapper3D_ViewModel.js"]}
-
+        
     @octoprint.plugin.BlueprintPlugin.route("/command", methods=["POST"])
     def handle_blueprint_command(self):
-        return handle_command(self)  # use the imported function
+        result = handle_command(self)
+        if result is None:
+            return "No response", 400  # Return a 400 Bad Request if no response
+        return result  # Ensure that you return whatever handle_command returns
 
     def is_blueprint_csrf_protected(self):
         return True
@@ -406,7 +409,7 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
 
 
 __plugin_name__ = "Swapper3D"
-__plugin_version__ = "0.3.3" 
+__plugin_version__ = "0.3.5" 
 __plugin_description__ = "An Octoprint plugin for Controlling the Swapper3D"
 __plugin_author__ = "BigBrain3D"
 __plugin_url__ = "https://github.com/BigBrain3D/Swapper3dOctoprintPlugin"

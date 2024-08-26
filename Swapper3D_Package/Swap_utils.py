@@ -109,14 +109,16 @@ def swap(plugin):
 
     #Load the next insert
     plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Swap_utils.swap.next_extruder:{plugin.next_extruder}"))
+    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"1.Aug23.Swap_utils.swap.next_extruder:Aug 23->about to initiate load"))
     load_insert(plugin, plugin.next_extruder)
+    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"4.Aug23.Swap_utils.swap.next_extruder:Past initiate load"))
                           
     #if the wipe procedure is ON
     #move extruder to RANDOM X-axis wipe location
     #deploy the wiper to RANDOM angle
     if NozzleWipe:
         gcode_commands = [f"G1 X{randomXpositionForWipe} F6000",
-                              f"G4"]
+                           "G4"]
         plugin._printer.commands(gcode_commands)
         
         plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Swap_utils.swap:Waiting for random X move"))
@@ -132,14 +134,20 @@ def swap(plugin):
     gcode_commands =[f"T{plugin.next_extruder}",
                      f"M109 S{plugin.currentTargetTemp}", #Wait for heat to stabilize
                      "G4",
-                     "G1 X{xPositionAfterWipe} F{yBreakStringSpeed}", #move extruder off the wipe pad (this if the actual "wipe")
+                     f"G1 X{xPositionAfterWipe} F{yBreakStringSpeed}", #move extruder off the wipe pad (this is the actual "wipe")
                      "G4",
                      "M118 E1 StowWiper",   # Echo command updated works with i3
                      "M117 E1 StowWiper"]  # Echo command updated works with virtual printer
     #insert the tool command here so that the filament is switched
     plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Tool change sent by Swap_utils.swap()"))
     plugin._printer.commands(gcode_commands)
+    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Aug23.Swap_utils.swap.next_extruder:Printer moves executed. Must be after OK."))
 
+    
+    #set the LCD display to show the currently loaded insert
+    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Swap_utils.Swap: Setting LCD message: InsertNumber{int(plugin.next_extruder) + 1}"))
+    command = f"InsertNumber{int(plugin.next_extruder) + 1}"
+    perform_command(plugin, command)
     
 
     plugin.current_extruder = plugin.next_extruder  # current_extruder becomes next_extruder
@@ -155,6 +163,7 @@ def swap(plugin):
     if not plugin.InitialLoadComplete:
         plugin.InitialLoadComplete = True
         
+    
         
     plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="*****Swap_utils.swap().Swap complete*****"))
  
