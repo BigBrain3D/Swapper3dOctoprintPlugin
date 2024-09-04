@@ -3,7 +3,7 @@
 plugin_identifier = "Swapper3D"
 plugin_package = "Swapper3D_Package"
 plugin_name = "Swapper3D"
-plugin_version = "0.3.5"
+plugin_version = "0.3.6"
 plugin_description = "Connect to Swapper3D and coordinate swaps with the 3D printer"
 plugin_author = "BigBrain3D"
 plugin_author_email = "info@bigbrain3D.com"

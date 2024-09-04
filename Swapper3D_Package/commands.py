@@ -17,7 +17,6 @@ def handle_command(self):
         self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Received command: " + command))
         success, error = try_handshake(self)
         self.serial_conn = success #added manually
-
         if not success:
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Handshake failed: {error}"))
             return jsonify(result="False", error=str(error)), 500
@@ -25,6 +24,14 @@ def handle_command(self):
         if self.serial_conn is None:
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Connection lost after handshake."))
             return jsonify(result="False", error="Connection lost after handshake"), 500
+
+
+        #connection was successful
+        #Home the TR servo on the Swapper3D
+        #rehome the ToolRotate servo #added Sep 3rd 2024 to try and address the repeatability issue of the TR servo
+        perform_command(self, "hometoolrotate", False)
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Homed ToolRotate - after connect from try handshake"))
+
 
         # self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Connected"))
         # time.sleep(3)

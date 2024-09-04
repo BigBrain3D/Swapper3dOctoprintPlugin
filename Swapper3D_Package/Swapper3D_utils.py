@@ -223,14 +223,17 @@ def unload_insert(plugin):
     plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"msDelayPerDegreeMovedDuringSwapPulldown: {msDelayPerDegreeMovedDuringSwapPulldown}"))
     perform_command(plugin, f"unload_pulldown_cuttingheight{msDelayPerDegreeMovedDuringSwapPulldown}")
     
-    # deploy the cutter
-    # cut once
-    # stow the insert
-    perform_command(plugin, "unload_deploycutter")
 
+    
     # whether it's Palette or MMU it always needs to cut and stow the insert
-    perform_command(plugin, "unload_cut")
-        
+    #perform_command(plugin, "unload_deploycutter") #commented out on Sep 2nd updated so that command now takes an angle
+#cut cycle
+    perform_command(plugin, "cutter_open")
+    perform_command(plugin, "unload_deploycutter120")
+    perform_command(plugin, "cutter_cut")
+
+      
+
     # palette multi cuts
     if filamentSwitcherType == "Palette":
         # move the tool arm out of the way a little so it's very quick
@@ -240,6 +243,9 @@ def unload_insert(plugin):
 
         # start palette cut loop
         for _ in range(intNumPaletteCuts):
+#open
+            perform_command(plugin, "cutter_open")
+
             # extrude
             gcode_commands = ["G92 E0 ;reset extrusion distance", 
                              f"G1 E{lengthAdditionalCut} F{extrudeSpeedPaletteCuts}"]
@@ -248,27 +254,52 @@ def unload_insert(plugin):
             time.sleep(delayAfterCut/1000)
 
             # cut
-            perform_command(plugin, "unload_cut")
+#cut           
+            perform_command(plugin, "cutter_cut")
         # end palette cut loop
 
+#cut cycle
+    # perform_command(plugin, "cutter_open")
+    # perform_command(plugin, "unload_deploycutter123")
+    # perform_command(plugin, "cutter_cut")
+    
     # retract filament
     # Send the G-code commands to prepare for swap
+ #break any string connection between insert and main filament strand
+    gcode_commands = ["G92 E0 ;reset extrusion distance"
+                     ,f"G1 E-10 F300"]
+    plugin._printer.commands(gcode_commands)
     gcode_commands = ["G92 E0 ;reset extrusion distance"
                      ,f"G1 E{retractLengthAfterCut} F{retractSpeed}"]
     plugin._printer.commands(gcode_commands)
+
+#wait for the retract to complete    
+    RetractDelay = int(lengthAdditionalCut)/(int(extrudeSpeedPaletteCuts)/60)
+    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"RetractDelay(sec): {RetractDelay}"))
+    time.sleep(RetractDelay) #seconds
+#open
+    perform_command(plugin, "cutter_open")
+    
+#stow cutter
+    perform_command(plugin, "unload_stowCutter", True) #must be true. Failing to wait can cause an OK in the wrong spot
+
+#used to retract filament here Sep 2nd 2023
+
     
     
     #commented out because the cutter guard is under the hotend for a long time and there is concern it could melt
     # perform_command(plugin, "unload_stowInsert", True)
     # perform_command(plugin, "unload_stowCutter")
 
-    perform_command(plugin, "unload_stowCutter", True) #must be true. Failing to wait can cause an OK in the wrong spot
     perform_command(plugin, "unload_stowInsert", True)
 
 
     if filamentSwitcherType == "Palette":
         perform_command(plugin, "unload_dumpWaste")  # Palette only.
 
+#open
+    #perform_command(plugin, "cutter_open") #commented out because it's wrecking the end effector
+    
     # set the feedrate and acceleration back to Stock
     gcode_commands = ["M302 S170 ;disable cold extrusion",
                       f"M203 E{StockExtruderMaxFeedrate}",
@@ -286,6 +317,11 @@ def unload_insert(plugin):
         plugin.insertLoaded = False
     else:
         plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Failed to Unload"))
+
+    #rehome the ToolRotate servo #added Sep 3rd 2024 to try and address the repeatability issue of the TR servo
+    perform_command(plugin, "hometoolrotate", False)
+    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Homed ToolRotate - after unload"))
+
 
     return True
 
@@ -336,6 +372,11 @@ def Stow_Wiper(plugin):
     plugin.SwapInProcess = False
     plugin.extrusionSinceLastSwap = 0
     
+    #rehome the ToolRotate servo #added Sep 3rd 2024 to try and address the repeatability issue of the TR servo
+    perform_command(plugin, "hometoolrotate", False)
+    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Homed ToolRotate - after wiper stowed"))
+
+    
     return True
     
 def try_handshake(plugin):
@@ -377,7 +418,7 @@ def try_handshake(plugin):
                     plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="connectionState", message="Connected"))
                     time.sleep(3)
                     plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="connectionState", message="Ready to Swap!"))
-
+                    
                     return ser, None
                 else:
                     attempts -= 1

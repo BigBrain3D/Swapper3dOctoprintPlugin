@@ -12,6 +12,7 @@ def get_default_settings():
         DelayAfterExtruderMovedToWipeLocationBeforeDeployingWiper="200",
         MinExtrusionBeforeSwap="10",
         zHeight = "95",
+        ExtraExtrusionAfterSwap = "0.0",
         StockExtruderMaxFeedrate = "120.0",
         SwapExtruderMaxFeedrate = "500.0",
         StockExtruderMaxAcceleration = "5000",

@@ -8,7 +8,7 @@ from .commands import handle_command
 from .gcode_injector import inject_gcode
 from .default_settings import get_default_settings
 from .Swap_utils import PreparePrinterForSwap, bore_align_on, bore_align_off, swap
-from .Swapper3D_utils import load_insert, unload_insert, unload_filament, Stow_Wiper, try_handshake
+from .Swapper3D_utils import load_insert, unload_insert, unload_filament, Stow_Wiper, try_handshake, perform_command 
 
 class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                       octoprint.plugin.TemplatePlugin,
@@ -67,6 +67,13 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
         self._logger.info("Swapper3D plugin has started!")
         success, error = try_handshake(self)
         self.serial_conn = success
+
+        #connection was successful
+        #Home the TR servo on the Swapper3D
+        #rehome the ToolRotate servo #added Sep 3rd 2024 to try and address the repeatability issue of the TR servo
+        perform_command(self, "hometoolrotate", False)
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Homed ToolRotate - __init__.py"))
+        self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Ready to swap"))
 
     def runStartGcode(self):
         # If the print has not started yet,
@@ -142,6 +149,10 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
             # if not comm_instance.isPrinting():
                 # return
                 
+            #if a tool change is received 
+            #but we are in the middle of a SWAP
+            #then end the Swap and issue the T command to the printer so that it can switch the filament
+            #also start a wipe to catch the ooze
             if (cmd.startswith("T") 
                 and self.SwapInProcess):
                 self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Tool change command sent while in Swap"))
@@ -165,6 +176,8 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
                 return
             
             # If the command is a tool change command (starts with "T")
+            #and not during a Swap
+            #then begin the Swap process
             if (cmd.startswith("T") 
             and not self.SwapInProcess):
                 if not comm_instance.isOperational():
@@ -409,7 +422,7 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
 
 
 __plugin_name__ = "Swapper3D"
-__plugin_version__ = "0.3.5" 
+__plugin_version__ = "0.3.6" 
 __plugin_description__ = "An Octoprint plugin for Controlling the Swapper3D"
 __plugin_author__ = "BigBrain3D"
 __plugin_url__ = "https://github.com/BigBrain3D/Swapper3dOctoprintPlugin"

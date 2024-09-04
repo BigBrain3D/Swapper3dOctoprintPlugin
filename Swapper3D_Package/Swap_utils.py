@@ -33,6 +33,8 @@ def PreparePrinterForSwap(plugin, currentZofPrinter, HomeAxis, EchoCommand):
     yBreakStringSpeed = plugin._settings.get(["yBreakStringSpeed"])
     BreakString = plugin._settings.get(["BreakString"])
     
+    
+    
     # Initialize the gcode_commands list. Add "G28 XYZ" if HomeAxis is True.
     gcode_commands = ["M84 X S999", # Keep the X-axis stepper motors enabled indefinitely
                       "M107"] # Turn off cooling fan
@@ -97,6 +99,8 @@ def swap(plugin):
     DelayAfterExtruderMovedToWipeLocationBeforeDeployingWiper = int(plugin._settings.get(["DelayAfterExtruderMovedToWipeLocationBeforeDeployingWiper"]))
     xPositionAfterWipe = int(plugin._settings.get(["xPositionAfterWipe"]))
     yBreakStringSpeed = plugin._settings.get(["yBreakStringSpeed"])
+    ExtraExtrusionAfterSwap = plugin._settings.get(["ExtraExtrusionAfterSwap"])
+    RetractionDistanceAfterSwap = plugin._settings.get(["RetractionDistanceAfterSwap"])
     
     plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"randomXpositionForWipe:{randomXpositionForWipe}"))
 
@@ -133,6 +137,15 @@ def swap(plugin):
     #signal temp heat up complete with M117/M118
     gcode_commands =[f"T{plugin.next_extruder}",
                      f"M109 S{plugin.currentTargetTemp}", #Wait for heat to stabilize
+                     "G4",
+                     "G92 E0; reset the extruder position",
+                     "G4",
+                     f"G1 E{ExtraExtrusionAfterSwap} F300",
+                     "G4",
+                     "G92 E0; reset the extruder position",
+                     "G4",
+                     f"G1 E-{RetractionDistanceAfterSwap} F2100",
+                     "G92 E0; reset the extruder position",
                      "G4",
                      f"G1 X{xPositionAfterWipe} F{yBreakStringSpeed}", #move extruder off the wipe pad (this is the actual "wipe")
                      "G4",
