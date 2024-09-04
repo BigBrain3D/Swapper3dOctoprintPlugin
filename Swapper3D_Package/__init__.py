@@ -71,7 +71,7 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
         #connection was successful
         #Home the TR servo on the Swapper3D
         #rehome the ToolRotate servo #added Sep 3rd 2024 to try and address the repeatability issue of the TR servo
-        perform_command(self, "hometoolrotate", False)
+        perform_command(self, "hometoolrotate", True) #False)
         self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Homed ToolRotate - __init__.py"))
         self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Ready to swap"))
 

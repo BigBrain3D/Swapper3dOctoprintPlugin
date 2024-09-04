@@ -95,10 +95,10 @@ def perform_command(plugin, command, WaitForOk=True):
             continue
         elif check_response:
             # Log the actual response received and compare it to the expected response
-            comparison_result = "same" if response_without_parity == expected_response_prefix else "not the same"
+            # comparison_result = "same" if response_without_parity == expected_response_prefix else "not the same"
             
             # Log the character-by-character comparison
-            # response_chars = ' '.join(f"[{ord(c)}]" for c in response_without_parity)
+            response_chars = ' '.join(f"[{ord(c)}]" for c in response_without_parity)
             # expected_chars = ' '.join(f"[{ord(c)}]" for c in expected_response_prefix)
 
             # debug_message = (
@@ -108,6 +108,8 @@ def perform_command(plugin, command, WaitForOk=True):
                 # f"Expected chars: {expected_chars}"
             # )
             # send_plugin_message(plugin, debug_message)
+            
+            send_plugin_message(plugin, response_chars)
 
             # If the response matches the expected command-specific 'ok', log success and return
             if response_without_parity == expected_response_prefix:
@@ -274,9 +276,9 @@ def unload_insert(plugin):
     plugin._printer.commands(gcode_commands)
 
 #wait for the retract to complete    
-    RetractDelay = int(lengthAdditionalCut)/(int(extrudeSpeedPaletteCuts)/60)
-    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"RetractDelay(sec): {RetractDelay}"))
-    time.sleep(RetractDelay) #seconds
+    #RetractDelay = int(lengthAdditionalCut)/(int(extrudeSpeedPaletteCuts)/60) + (10/(300/600))
+    #plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"RetractDelay(sec): {RetractDelay}"))
+    time.sleep(3) #seconds
 #open
     perform_command(plugin, "cutter_open")
     
