@@ -1,0 +1,84 @@
+{# Octoprint plugin name: Swapper3D, File: Swapper3D_tab.jinja2, Author: BigBrain3D, License: AGPLv3 #}
+
+<div id="tab_plugin_Swapper3D">
+    <h1>Swapper3D Control</h1>
+
+    <h3>Swapper3D Connection State</h3>
+    <input id="connectionState" type="text" class="form-control" readonly>
+    <br>
+    <button id="connectSwapper3D" type="button" class="btn btn-primary">Connect</button>
+    <button id="disconnectSwapper3D" type="button" class="btn btn-primary">Disconnect</button>
+	<br>
+    <button id="retrieveFirmwareVersion" type="button" class="btn btn-primary">Retrieve Swapper3D firmware version</button>
+
+
+    <br><br>
+
+    <h3>Currently loaded insert#</h3>
+    <input id="currentlyLoadedInsert" type="text" class="form-control" readonly>
+    <br>
+    <button id="swapToInsertButton" type="button" class="btn btn-primary">Swap to insert #</button>
+    <select id="insertDropdown">
+        {% for i in range(1, 26) %}
+        <option value="{{ i }}">{{ i }}</option>
+        {% endfor %}
+    </select>
+    
+    <br>
+
+    <button id="unloadInsertButton" type="button" class="btn btn-primary">Unload</button>
+    <!-- New Bore alignment buttons -->
+    <br><br>
+    <button id="boreAlignmentOnButton" type="button" class="btn btn-primary">Bore alignment mode ON</button>
+    <button id="boreAlignmentOffButton" type="button" class="btn btn-primary">Bore alignment mode OFF</button>
+
+    <br><br>
+
+    <h3>Swapper3D Log</h3>     
+    <div class="flex-container">
+		<label for="Autoscroll">Autoscroll (on/off):</label>
+		<label class="switch">
+			<input type="checkbox" id="Autoscroll" title="Default: On" data-bind="checked: settings.plugins.Swapper3D.Autoscroll" checked>
+			<span class="slider round"></span>
+		</label>
+    </div>
+    <textarea id="Swapper3DLog" class="form-control" rows="5" style="width:100%"></textarea>
+
+
+    <br><br>
+<!--
+    <h3>Firmware Information</h3>
+
+    <div class="form-group">
+        <label for="installedFirmwareVersion">Installed Firmware Version:</label>
+        <input id="installedFirmwareVersion" type="text" class="form-control" readonly>
+    </div>
+
+    <div class="form-group">
+        <label for="latestFirmwareVersion">Latest Firmware Version:</label>
+        <input id="latestFirmwareVersion" type="text" class="form-control" readonly>
+    </div>
+
+
+    <button id="installRuntimeFirmware" type="button" class="btn btn-primary">Install Runtime Firmware</button>
+    <br>
+    <button id="installServoSetupFirmware" type="button" class="btn btn-primary">Install Servo Setup Firmware</button>
+
+    <br><br>
+-->
+
+    <a href="https://www.bigbrain3d.com" target="_blank">
+        <img src="{{ url_for('plugin.Swapper3D.static', filename='img/BigBrain3D-Logo-2022-1.jpg') }}" alt="BigBrain3D Logo" style="width:50%">
+    </a>
+</div>
+
+<!-- Add this to your CSS file or in a style block -->
+<style>
+    .flex-container {
+        display: flex;
+        align-items: center;
+    }
+    .flex-container > label.switch {
+        margin-left: 10px;
+    }
+</style>
