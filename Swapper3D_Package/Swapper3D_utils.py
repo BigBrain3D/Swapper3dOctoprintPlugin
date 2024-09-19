@@ -382,54 +382,66 @@ def Stow_Wiper(plugin):
     return True
     
 def try_handshake(plugin):
+    # Identify the available Arduino ports. The list only includes ports with 'Arduino Uno' in their description.
+    # This avoids connecting to other devices and interfering with the printer connection.
     arduino_ports = [port.device for port in serial.tools.list_ports.comports() if 'Arduino Uno' in port.description]
-    #commented out to force only try connect on Arduino ports. This will save time and prevent interfering with the printer connection.
-    #other_ports = [port.device for port in serial.tools.list_ports.comports() if 'Arduino Uno' not in port.description]
-    #all_ports = arduino_ports + other_ports
-    
-    # if no arduino ports are found then return with appropriate message
+
+    # If no Arduino ports are found, return an error message.
     if not arduino_ports:
         return None, "No Swapper3D found. Are you sure the USB is plugged between the Swapper3D and Octoprint?"
 
+    # Try to connect to each Arduino port found
     for port in arduino_ports:
         try:
             plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Trying to connect to port {port}..."))
-            ser = serial.Serial(port, 9600, timeout=2)
-            time.sleep(2)
+            ser = serial.Serial(port, 9600, timeout=10)  # Increased the timeout to 10 seconds to account for slower Raspberry Pi responses.
+            time.sleep(3)  # Allow some time for the connection to stabilize.
 
-            attempts = 3
-            while attempts > 0:
+            connection_attempts = 3  # Allow 3 connection attempts
+            while connection_attempts > 0:
                 plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Sending handshake message 'octoprint'..."))
                 message = 'octoprint'
                 parity_bit = parity_of(message)
                 plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Parity bit for 'octoprint': {parity_bit}"))
                 ser.write((message + str(parity_bit) + '\n').encode())
-                time.sleep(1)
+                time.sleep(3)
 
-                response = ser.readline().decode('utf-8').strip()
-                plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Received: {response}"))
+                read_attempts = 3  # Try to read the response up to 3 times with a 3-second delay between reads
+                while read_attempts > 0:
+                    time.sleep(3)  # Wait 3 seconds before trying to read the response
+                    response = ser.readline().decode('utf-8').strip()
+                    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Received: {response}"))
 
-                # Split the received message and parity bit
-                response_message, response_parity_bit = response[:-1], response[-1]
+                    if response:
+                        # Split the received message and parity bit
+                        response_message, response_parity_bit = response[:-1], response[-1]
 
-                # Calculate and check parity of received message
-                if parity_of(response_message) == int(response_parity_bit):
-                    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Handshake successful!"))
-                    plugin._settings.set(["serialPort"], port)
-                    plugin._settings.set(["baudrate"], ser.baudrate)
-                    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="connectionState", message="Connected"))
-                    time.sleep(3)
-                    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="connectionState", message="Ready to Swap!"))
+                        # Calculate and check the parity of the received message
+                        if parity_of(response_message) == int(response_parity_bit):
+                            plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Handshake successful!"))
+                            plugin._settings.set(["serialPort"], port)
+                            plugin._settings.set(["baudrate"], ser.baudrate)
+                            plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="connectionState", message="Connected"))
+                            time.sleep(3)
+                            plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="connectionState", message="Ready to Swap!"))
+                            return ser, None
+                        else:
+                            plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Parity check failed for message: {response_message}"))
+                    else:
+                        plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="No response received"))
                     
-                    return ser, None
-                else:
-                    attempts -= 1
-                    plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Parity check failed for message: {response_message}"))
+                    read_attempts -= 1  # Decrement the number of read attempts
+
+                # After 3 read attempts, decrement the connection attempts
+                connection_attempts -= 1
 
             plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message="Handshake failed, closing connection."))
             ser.close()
-            return None, f"Failed to handshake with the device on port {port}. Parity check failed for response after 3 attempts"
+            return None, f"Failed to handshake with the device on port {port}. No valid response received after 3 read attempts"
+        
+        # If there is an error in connecting to the serial port, catch and log the exception
         except serial.SerialException as e:
             plugin._plugin_manager.send_plugin_message(plugin._identifier, dict(type="log", message=f"Failed to connect to {port}: {e}"))
+    
+    # If no ports are successfully connected, return a failure message.
     return None, "Failed to connect to any port"
-

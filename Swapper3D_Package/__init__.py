@@ -63,17 +63,21 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
             # Take other actions as necessary
             self.runStartGcode();
             
+    #revised on Sept 18th 2024 to handle swapper connection failure
     def on_after_startup(self):
         self._logger.info("Swapper3D plugin has started!")
         success, error = try_handshake(self)
+        if not success:
+            self._logger.error(f"Handshake failed: {error}")
+            return
+            
         self.serial_conn = success
 
-        #connection was successful
-        #Home the TR servo on the Swapper3D
-        #rehome the ToolRotate servo #added Sep 3rd 2024 to try and address the repeatability issue of the TR servo
-        perform_command(self, "hometoolrotate", True) #False)
-        self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message=f"Homed ToolRotate - __init__.py"))
-        self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Ready to swap"))
+        if self.serial_conn:
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="connectionState", message="Ready to swap"))
+            perform_command(self, "hometoolrotate", True)
+            self._plugin_manager.send_plugin_message(self._identifier, dict(type="log", message="Homed ToolRotate - __init__.py"))
+
 
     def runStartGcode(self):
         # If the print has not started yet,
@@ -422,7 +426,7 @@ class Swapper3DPlugin(octoprint.plugin.StartupPlugin,
 
 
 __plugin_name__ = "Swapper3D"
-__plugin_version__ = "1.0.1" 
+__plugin_version__ = "1.0.2" 
 __plugin_description__ = "An Octoprint plugin for Controlling the Swapper3D"
 __plugin_author__ = "BigBrain3D"
 __plugin_url__ = "https://github.com/BigBrain3D/Swapper3dOctoprintPlugin"
